@@ -1,0 +1,3 @@
+[submodule "voodoo"]
+	path = voodoo
+	url = git@github.com:lidavidm/voodoo.git

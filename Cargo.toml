@@ -1,0 +1,8 @@
+[package]
+name = "labyrinth"
+version = "0.1.0"
+authors = ["David Li <li.davidm96@gmail.com>"]
+
+[dependencies]
+specs = "0.7"
+voodoo = { path = 'voodoo' }
