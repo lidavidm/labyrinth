@@ -5,4 +5,6 @@ authors = ["David Li <li.davidm96@gmail.com>"]
 
 [dependencies]
 specs = "0.7"
+termion = "1.1.2"
+time = "0.1"
 voodoo = { path = 'voodoo' }
