@@ -14,11 +14,28 @@ const TICK_TIME: u64 = MS * 25;
 const WIDTH: u16 = 80;
 const HEIGHT: u16 = 24;
 
+fn async_events<R: std::io::Read + Send + 'static>(stdin: R) -> mpsc::Receiver<std::io::Result<termion::event::Event>> {
+    use termion::input::TermRead;
+
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        for event in stdin.events() {
+            if let Ok(termion::event::Event::Key(termion::event::Key::Esc)) = event {
+                tx.send(event).expect("Couldn't transmit event!");
+                break;
+            }
+            tx.send(event).expect("Couldn't transmit event!");
+        }
+    });
+
+    rx
+}
+
 fn run() -> f64 {
     use std::time::Duration;
 
     use specs::Join;
-    use termion::input::TermRead;
     use voodoo::color::ColorValue;
     use voodoo::terminal::{Mode, Terminal};
     use voodoo::window::{Point, Window};
@@ -36,17 +53,7 @@ fn run() -> f64 {
 
     let mut compositor = voodoo::compositor::Compositor::new(WIDTH, HEIGHT);
 
-    let (tx, rx) = mpsc::channel();
-
-    thread::spawn(move || {
-        for event in stdin.events() {
-            if let Ok(termion::event::Event::Key(termion::event::Key::Esc)) = event {
-                tx.send(event).expect("Couldn't transmit event!");
-                break;
-            }
-            tx.send(event).expect("Couldn't transmit event!");
-        }
-    });
+    let rx = async_events(stdin);
 
     let mut last_tick = time::precise_time_ns();
     let mut dt = 0;
