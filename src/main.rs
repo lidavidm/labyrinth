@@ -36,8 +36,6 @@ fn run() -> f64 {
 
     let mut compositor = voodoo::compositor::Compositor::new(WIDTH, HEIGHT);
 
-    println!("\x1B[?1003h");
-
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
@@ -80,12 +78,11 @@ fn run() -> f64 {
 
         compositor.display(&mut stdout);
         thread::sleep(Duration::from_millis((TICK_TIME - dt) / MS));
+
         let frame_time = time::precise_time_ns() - old_tick;
         avg_frame_time = ((frames as f64 * avg_frame_time) + frame_time as f64) / (frames as f64 + 1.0);
         frames += 1;
     }
-
-    println!("\x1B[?1003l");
 
     avg_frame_time
 }
