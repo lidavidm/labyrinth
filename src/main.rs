@@ -11,25 +11,30 @@ use std::thread;
 const MS: u64 = 1_000_000;
 const TICK_TIME: u64 = MS * 25;
 
+const WIDTH: u16 = 80;
+const HEIGHT: u16 = 24;
+
 fn run() -> f64 {
     use std::time::Duration;
 
+    use specs::Join;
     use termion::input::TermRead;
     use voodoo::color::ColorValue;
     use voodoo::terminal::{Mode, Terminal};
+    use voodoo::window::{Point, Window};
 
     let mut world = specs::World::new();
     components::register_all(&mut world);
     let mut planner = specs::Planner::<()>::new(world, 2);
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
 
-    planner.mut_world().create_now().with(components::map::Map::new());
+    planner.mut_world().create_now().with(components::map::Map::new(Window::new(Point::new(0, 0), WIDTH, HEIGHT)));
 
     let (terminal, stdin, mut stdout) = Terminal::new();
     terminal.cursor(Mode::Disabled);
     terminal.clear_color(ColorValue::Black);
 
-    let mut compositor = voodoo::compositor::Compositor::new(80, 24);
+    let mut compositor = voodoo::compositor::Compositor::new(WIDTH, HEIGHT);
 
     println!("\x1B[?1003h");
 
@@ -55,7 +60,7 @@ fn run() -> f64 {
             if let Ok(termion::event::Event::Key(termion::event::Key::Esc)) = event {
                 break 'main;
             }
-            println!("{:?}", event);
+            // TODO: dispatch key events to appropriate systems
         }
 
         let now = time::precise_time_ns();
@@ -68,7 +73,12 @@ fn run() -> f64 {
             planner.dispatch(());
         }
 
-        // compositor.refresh(&mut stdout);
+        let maps = planner.mut_world().read::<components::map::Map>();
+        for map in maps.iter() {
+            map.refresh(&mut compositor);
+        }
+
+        compositor.display(&mut stdout);
         thread::sleep(Duration::from_millis((TICK_TIME - dt) / MS));
         let frame_time = time::precise_time_ns() - old_tick;
         avg_frame_time = ((frames as f64 * avg_frame_time) + frame_time as f64) / (frames as f64 + 1.0);
