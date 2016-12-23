@@ -1,3 +1,4 @@
+extern crate rand;
 extern crate specs;
 extern crate termion;
 extern crate time;

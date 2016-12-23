@@ -1,3 +1,6 @@
+use std::collections::VecDeque;
+
+use rand::{self, Rng};
 use specs;
 use voodoo::compositor::Compositor;
 use voodoo::window::{Point, Window};
@@ -16,6 +19,8 @@ pub struct Map {
 
 pub struct MapBuilder {
     pub num_iterations: usize,
+    modified_cells: VecDeque<(usize, MapCell)>,
+    actual_map: Vec<MapCell>,
 }
 
 pub struct RenderSystem {
@@ -27,7 +32,7 @@ pub struct BuilderSystem {
 impl Map {
     pub fn new(window: Window) -> Map {
         Map {
-            map: vec![MapCell::Floor; (window.width * window.height) as usize],
+            map: vec![MapCell::Null; (window.width * window.height) as usize],
             window: window,
         }
     }
@@ -61,11 +66,66 @@ impl MapBuilder {
     pub fn new() -> MapBuilder {
         MapBuilder {
             num_iterations: 0,
+            modified_cells: VecDeque::new(),
+            actual_map: Vec::new(),
         }
     }
 
     pub fn dig_feature(&mut self, map: &mut Map) {
-        map.map[100 + self.num_iterations] = MapCell::Null;
+        use self::MapCell::*;
+
+        if self.num_iterations == 0 {
+            self.actual_map.clone_from(&map.map);
+            for y_offset in (-2)..3 {
+                for x_offset in (-2)..3 {
+                    let x = (map.window.width as i32 / 2) + x_offset;
+                    let y = (map.window.height as i32 / 2) + y_offset;
+                    let offset = (y as usize) * (map.window.width as usize) + (x as usize);
+                    let cell = if y_offset == -2 || y_offset == 2 || x_offset == -2 || x_offset == 2 {
+                        Wall
+                    }
+                    else {
+                        Floor
+                    };
+                    self.modified_cells.push_back((offset, cell));
+                    self.actual_map[offset] = cell;
+                }
+            }
+        }
+        else {
+            for _ in 0..1000 {
+                let index = rand::thread_rng().gen_range(0, self.actual_map.len());
+                if let Wall = self.actual_map[index] {
+                    let above = util::above(&self.actual_map, map.window.width, index);
+                    let below = util::below(&self.actual_map, map.window.width, index);
+                    let left = util::left(&self.actual_map, map.window.width, index);
+                    let right = util::right(&self.actual_map, map.window.width, index);
+
+                    self.modified_cells.push_back((index, Floor));
+                    self.actual_map[index] = Floor;
+
+                    match (above, below, left, right) {
+                        (Floor, _, Wall, Wall) => {
+
+                        }
+
+                        (_, Floor, Wall, Wall) => {
+                        }
+
+                        (Wall, Wall, Floor, _) => {
+
+                        }
+
+                        (Wall, Wall, _, Floor) => {
+                        }
+
+                        _ => continue,
+                    }
+
+                    break;
+                }
+            }
+        }
         self.num_iterations += 1;
     }
 }
@@ -113,13 +173,67 @@ impl specs::System<()> for BuilderSystem {
             if map_builder.num_iterations < 10 {
                 map_builder.dig_feature(map);
             }
-            else {
+            else if map_builder.modified_cells.len() == 0 {
                 to_remove.push(entity);
+            }
+
+            for _ in 0..2 {
+                if let Some((index, cell)) = map_builder.modified_cells.pop_front() {
+                    map.map[index] = cell;
+                }
             }
         }
 
         for entity in to_remove {
             builders.remove(entity);
+        }
+    }
+}
+
+mod util {
+    use super::MapCell;
+
+    pub fn above(map: &[MapCell], width: u16, index: usize) -> MapCell {
+        if index >= width as usize {
+            map[index - width as usize]
+        }
+        else {
+            MapCell::Wall
+        }
+    }
+
+    pub fn below(map: &[MapCell], width: u16, index: usize) -> MapCell {
+        let res = index + (width as usize);
+        if res < map.len() {
+            map[res]
+        }
+        else {
+            MapCell::Wall
+        }
+    }
+
+    pub fn left(map: &[MapCell], width: u16, index: usize) -> MapCell {
+        if index >= 1 {
+            let res = index - 1;
+            if res / (width as usize) == index / (width as usize) {
+                map[res]
+            }
+            else {
+                MapCell::Wall
+            }
+        }
+        else {
+            MapCell::Wall
+        }
+    }
+
+    pub fn right(map: &[MapCell], width: u16, index: usize) -> MapCell {
+        let res = index + 1;
+        if res < map.len() && res / (width as usize) == index / (width as usize) {
+            map[res]
+        }
+        else {
+            MapCell::Wall
         }
     }
 }

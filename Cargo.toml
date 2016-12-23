@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["David Li <li.davidm96@gmail.com>"]
 
 [dependencies]
+rand = "0.3"
 specs = "0.7"
 termion = "1.1.2"
 time = "0.1"
