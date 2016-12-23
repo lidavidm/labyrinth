@@ -76,12 +76,12 @@ impl MapBuilder {
 
         if self.num_iterations == 0 {
             self.actual_map.clone_from(&map.map);
-            for y_offset in (-2)..3 {
-                for x_offset in (-2)..3 {
+            for y_offset in (-3)..4 {
+                for x_offset in (-3)..4 {
                     let x = (map.window.width as i32 / 2) + x_offset;
                     let y = (map.window.height as i32 / 2) + y_offset;
                     let offset = (y as usize) * (map.window.width as usize) + (x as usize);
-                    let cell = if y_offset == -2 || y_offset == 2 || x_offset == -2 || x_offset == 2 {
+                    let cell = if y_offset == -3 || y_offset == 3 || x_offset == -3 || x_offset == 3 {
                         Wall
                     }
                     else {
@@ -93,33 +93,109 @@ impl MapBuilder {
             }
         }
         else {
-            for _ in 0..1000 {
+            'testing: for _ in 0..1000 {
                 let index = rand::thread_rng().gen_range(0, self.actual_map.len());
                 if let Wall = self.actual_map[index] {
-                    let above = util::above(&self.actual_map, map.window.width, index);
-                    let below = util::below(&self.actual_map, map.window.width, index);
-                    let left = util::left(&self.actual_map, map.window.width, index);
-                    let right = util::right(&self.actual_map, map.window.width, index);
+                    let above = util::above(&self.actual_map, map.window.width, index)
+                        .and_then(|i| self.actual_map.get(i)).cloned().unwrap_or(Floor);
+                    let below = util::below(&self.actual_map, map.window.width, index)
+                        .and_then(|i| self.actual_map.get(i)).cloned().unwrap_or(Floor);
+                    let left = util::left(&self.actual_map, map.window.width, index)
+                        .and_then(|i| self.actual_map.get(i)).cloned().unwrap_or(Floor);
+                    let right = util::right(&self.actual_map, map.window.width, index)
+                        .and_then(|i| self.actual_map.get(i)).cloned().unwrap_or(Floor);
 
-                    self.modified_cells.push_back((index, Floor));
-                    self.actual_map[index] = Floor;
+                    enum Direction {
+                        Up,
+                        Down,
+                        Left,
+                        Right,
+                    }
 
-                    match (above, below, left, right) {
+                    let direction = match (above, below, left, right) {
                         (Floor, _, Wall, Wall) => {
-
+                            Direction::Down
                         }
 
                         (_, Floor, Wall, Wall) => {
+                            Direction::Up
                         }
 
                         (Wall, Wall, Floor, _) => {
-
+                            Direction::Right
                         }
 
                         (Wall, Wall, _, Floor) => {
+                            Direction::Left
                         }
 
-                        _ => continue,
+                        _ => continue 'testing,
+                    };
+
+                    if rand::thread_rng().next_f32() < 0.7 {
+                        // Corridor
+                        let width = rand::thread_rng().gen_range(1, 3);
+                        let length = rand::thread_rng().gen_range(4, 10);
+                        let mut cells = vec![];
+
+                        let mut cur = index;
+                        for _ in 0..length {
+                            let new_index = match direction {
+                                Direction::Down => {
+                                    util::below(&self.actual_map, map.window.width, cur)
+                                }
+                                Direction::Up => {
+                                    util::above(&self.actual_map, map.window.width, cur)
+                                }
+                                Direction::Right => {
+                                    util::right(&self.actual_map, map.window.width, cur)
+                                }
+                                Direction::Left => {
+                                    util::left(&self.actual_map, map.window.width, cur)
+                                }
+                            }.and_then(|idx| if self.actual_map[idx] != Null { None } else { Some(idx) });
+
+                            if let Some(idx) = new_index {
+                                cells.push((idx, Floor));
+                                cur = idx;
+                                // TODO: check nullness
+                                if let Some(idx) = match direction {
+                                    Direction::Down | Direction::Up => {
+                                        util::left(&self.actual_map, map.window.width, cur)
+                                    }
+                                    Direction::Right | Direction::Left => {
+                                        util::above(&self.actual_map, map.window.width, cur)
+                                    }
+                                } {
+                                    cells.push((idx, Wall));
+                                }
+                                if let Some(idx) = match direction {
+                                    Direction::Down | Direction::Up => {
+                                        util::right(&self.actual_map, map.window.width, cur)
+                                    }
+                                    Direction::Right | Direction::Left => {
+                                        util::below(&self.actual_map, map.window.width, cur)
+                                    }
+                                } {
+                                    cells.push((idx, Wall));
+                                }
+                            }
+                            else {
+                                continue 'testing;
+                            }
+                        }
+
+                        self.actual_map[index] = Floor;
+                        self.modified_cells.push_back((index, Floor));
+                        for &(idx, c) in cells.iter() {
+                            self.actual_map[idx] = c;
+                        }
+                        self.modified_cells.extend(&cells);
+                        self.actual_map[cur] = Wall;
+                        self.modified_cells.push_back((cur, Wall));
+                    }
+                    else {
+                        // Room
                     }
 
                     break;
@@ -175,12 +251,15 @@ impl specs::System<()> for BuilderSystem {
             }
             else if map_builder.modified_cells.len() == 0 {
                 to_remove.push(entity);
+                for cell in map.map.iter_mut() {
+                    if let MapCell::Null = *cell {
+                        *cell = MapCell::Wall;
+                    }
+                }
             }
 
-            for _ in 0..2 {
-                if let Some((index, cell)) = map_builder.modified_cells.pop_front() {
-                    map.map[index] = cell;
-                }
+            if let Some((index, cell)) = map_builder.modified_cells.pop_front() {
+                map.map[index] = cell;
             }
         }
 
@@ -193,47 +272,47 @@ impl specs::System<()> for BuilderSystem {
 mod util {
     use super::MapCell;
 
-    pub fn above(map: &[MapCell], width: u16, index: usize) -> MapCell {
+    pub fn above(map: &[MapCell], width: u16, index: usize) -> Option<usize> {
         if index >= width as usize {
-            map[index - width as usize]
+            Some(index - width as usize)
         }
         else {
-            MapCell::Wall
+            None
         }
     }
 
-    pub fn below(map: &[MapCell], width: u16, index: usize) -> MapCell {
+    pub fn below(map: &[MapCell], width: u16, index: usize) -> Option<usize> {
         let res = index + (width as usize);
         if res < map.len() {
-            map[res]
+            Some(res)
         }
         else {
-            MapCell::Wall
+            None
         }
     }
 
-    pub fn left(map: &[MapCell], width: u16, index: usize) -> MapCell {
+    pub fn left(map: &[MapCell], width: u16, index: usize) -> Option<usize> {
         if index >= 1 {
             let res = index - 1;
             if res / (width as usize) == index / (width as usize) {
-                map[res]
+                Some(res)
             }
             else {
-                MapCell::Wall
+                None
             }
         }
         else {
-            MapCell::Wall
+            None
         }
     }
 
-    pub fn right(map: &[MapCell], width: u16, index: usize) -> MapCell {
+    pub fn right(map: &[MapCell], width: u16, index: usize) -> Option<usize> {
         let res = index + 1;
         if res < map.len() && res / (width as usize) == index / (width as usize) {
-            map[res]
+            Some(res)
         }
         else {
-            MapCell::Wall
+            None
         }
     }
 }
