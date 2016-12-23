@@ -44,6 +44,8 @@ fn run() -> f64 {
     let mut world = specs::World::new();
     components::register_all(&mut world);
     let mut planner = specs::Planner::<()>::new(world, 2);
+    let (input_system, key_event_channel) = components::input::InputSystem::new();
+    planner.add_system(input_system, "input", 100);
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);
 
@@ -68,6 +70,9 @@ fn run() -> f64 {
         for event in rx.try_iter() {
             if let Ok(termion::event::Event::Key(termion::event::Key::Esc)) = event {
                 break 'main;
+            }
+            else if let Ok(termion::event::Event::Key(k)) = event {
+                key_event_channel.send(k).unwrap();
             }
             // TODO: dispatch key events to appropriate systems
         }

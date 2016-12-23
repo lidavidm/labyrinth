@@ -43,6 +43,14 @@ impl Map {
         }
     }
 
+    pub fn max_x(&self) -> u16 {
+        self.width as u16 - self.window.width
+    }
+
+    pub fn max_y(&self) -> u16 {
+        self.height as u16 - self.window.height
+    }
+
     pub fn render(&mut self) {
         use self::MapCell::*;
 
@@ -206,14 +214,14 @@ impl specs::System<()> for BuilderSystem {
 
         let mut to_remove = vec![];
         for (entity, mut map, mut map_builder) in (&entities, &mut maps, &mut builders).iter() {
-            if map_builder.num_iterations < 50 {
+            if map_builder.num_iterations < 100 {
                 map_builder.dig_feature(map);
             }
             else if map_builder.modified_cells.len() == 0 {
                 to_remove.push(entity);
             }
 
-            for _ in 0..5 {
+            for _ in 0..10 {
                 if let Some((index, cell)) = map_builder.modified_cells.pop_front() {
                     map.map[index] = cell;
                 }
