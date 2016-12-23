@@ -14,6 +14,9 @@ pub enum MapCell {
 
 pub struct Map {
     pub map: Vec<MapCell>,
+    pub width: usize,
+    pub height: usize,
+    pub position: Point,
     window: Window,
 }
 
@@ -30,26 +33,34 @@ pub struct BuilderSystem {
 }
 
 impl Map {
-    pub fn new(window: Window) -> Map {
+    pub fn new(width: usize, height: usize, window: Window) -> Map {
         Map {
-            map: vec![MapCell::Null; (window.width * window.height) as usize],
+            map: vec![MapCell::Null; width * height as usize],
+            width: width,
+            height: height,
+            position: Point::new(0, 0),
             window: window,
         }
     }
 
     pub fn render(&mut self) {
         use self::MapCell::*;
-        for (offset, cell) in self.map.iter().enumerate() {
-            let x = offset as u16 % self.window.width;
-            let y = offset as u16 / self.window.width;
-            self.window.put_at(
-                Point::new(x, y),
-                match *cell {
-                    Null => ' ',
-                    Wall => '#',
-                    Floor => '·',
-                }
-            );
+
+        for row_offset in 0..self.window.height {
+            let start = (row_offset + self.position.y) as usize * self.width;
+            for col_offset in 0..self.window.width {
+                let offset = self.position.x as usize + start + col_offset as usize;
+                let y = row_offset;
+                let x = col_offset;
+                self.window.put_at(
+                    Point::new(x, y),
+                    match self.map[offset] {
+                        Null => ' ',
+                        Wall => '#',
+                        Floor => '·',
+                    }
+                )
+            }
         }
     }
 
@@ -200,15 +211,12 @@ impl specs::System<()> for BuilderSystem {
             }
             else if map_builder.modified_cells.len() == 0 {
                 to_remove.push(entity);
-                // for cell in map.map.iter_mut() {
-                //     if let MapCell::Null = *cell {
-                //         *cell = MapCell::Wall;
-                //     }
-                // }
             }
 
-            if let Some((index, cell)) = map_builder.modified_cells.pop_front() {
-                map.map[index] = cell;
+            for _ in 0..5 {
+                if let Some((index, cell)) = map_builder.modified_cells.pop_front() {
+                    map.map[index] = cell;
+                }
             }
         }
 

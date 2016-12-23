@@ -48,7 +48,7 @@ fn run() -> f64 {
     planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);
 
     planner.mut_world().create_now()
-        .with(components::map::Map::new(Window::new(Point::new(0, 0), WIDTH, HEIGHT)))
+        .with(components::map::Map::new(80, 24, Window::new(Point::new(0, 0), WIDTH, HEIGHT)))
         .with(components::map::MapBuilder::new());
 
     let (terminal, stdin, mut stdout) = Terminal::new();
