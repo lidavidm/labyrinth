@@ -35,7 +35,7 @@ pub struct BuilderSystem {
 impl Map {
     pub fn new(width: usize, height: usize, window: Window) -> Map {
         Map {
-            map: vec![MapCell::Null; width * height as usize],
+            map: vec![MapCell::Null; width * height],
             width: width,
             height: height,
             position: Point::new(0, 0),
@@ -89,9 +89,9 @@ impl MapBuilder {
             self.actual_map.clone_from(&map.map);
             for y_offset in (-3)..4 {
                 for x_offset in (-3)..4 {
-                    let x = (map.window.width as i32 / 2) + x_offset;
-                    let y = (map.window.height as i32 / 2) + y_offset;
-                    let offset = (y as usize) * (map.window.width as usize) + (x as usize);
+                    let x = (map.width as i32 / 2) + x_offset;
+                    let y = (map.height as i32 / 2) + y_offset;
+                    let offset = (y as usize) * map.width + (x as usize);
                     let cell = if y_offset == -3 || y_offset == 3 || x_offset == -3 || x_offset == 3 {
                         Wall
                     }
@@ -108,13 +108,13 @@ impl MapBuilder {
             'testing: for _ in 0..1000 {
                 let index = rand::thread_rng().gen_range(0, self.actual_map.len());
                 if let Wall = self.actual_map[index] {
-                    let above = util::above(&self.actual_map, map.window.width, index)
+                    let above = util::above(&self.actual_map, map.width, index)
                         .and_then(|i| self.actual_map.get(i)).cloned().unwrap_or(Floor);
-                    let below = util::below(&self.actual_map, map.window.width, index)
+                    let below = util::below(&self.actual_map, map.width, index)
                         .and_then(|i| self.actual_map.get(i)).cloned().unwrap_or(Floor);
-                    let left = util::left(&self.actual_map, map.window.width, index)
+                    let left = util::left(&self.actual_map, map.width, index)
                         .and_then(|i| self.actual_map.get(i)).cloned().unwrap_or(Floor);
-                    let right = util::right(&self.actual_map, map.window.width, index)
+                    let right = util::right(&self.actual_map, map.width, index)
                         .and_then(|i| self.actual_map.get(i)).cloned().unwrap_or(Floor);
 
                     let direction = match (above, below, left, right) {
@@ -146,7 +146,7 @@ impl MapBuilder {
                         ((5, 20), (5, 20))
                     };
 
-                    let res = util::generate_room(index, direction, &self.actual_map, map.window.width,
+                    let res = util::generate_room(index, direction, &self.actual_map, map.width,
                                                   width_range, length_range);
                     if let Some(cells) = res {
                         for &(index, cell) in cells.iter() {
@@ -237,7 +237,7 @@ mod util {
     }
 
     impl Direction {
-        pub fn to_index(&self, map: &[MapCell], width: u16, cur: usize) -> Option<usize> {
+        pub fn to_index(&self, map: &[MapCell], width: usize, cur: usize) -> Option<usize> {
             match *self {
                 Direction::Down => {
                     below(map, width, cur)
@@ -255,7 +255,7 @@ mod util {
         }
     }
 
-    pub fn generate_room(start_point: usize, direction: Direction, actual_map: &[MapCell], map_width: u16,
+    pub fn generate_room(start_point: usize, direction: Direction, actual_map: &[MapCell], map_width: usize,
                          width_range: (usize, usize), height_range: (usize, usize)) -> Option<Vec<(usize, super::MapCell)>> {
         use rand::{self, Rng};
         use super::MapCell::*;
@@ -333,17 +333,17 @@ mod util {
         Some(cells)
     }
 
-    pub fn above(map: &[MapCell], width: u16, index: usize) -> Option<usize> {
-        if index >= width as usize {
-            Some(index - width as usize)
+    pub fn above(map: &[MapCell], width: usize, index: usize) -> Option<usize> {
+        if index >= width {
+            Some(index - width)
         }
         else {
             None
         }
     }
 
-    pub fn below(map: &[MapCell], width: u16, index: usize) -> Option<usize> {
-        let res = index + (width as usize);
+    pub fn below(map: &[MapCell], width: usize, index: usize) -> Option<usize> {
+        let res = index + width;
         if res < map.len() {
             Some(res)
         }
@@ -352,10 +352,10 @@ mod util {
         }
     }
 
-    pub fn left(map: &[MapCell], width: u16, index: usize) -> Option<usize> {
+    pub fn left(map: &[MapCell], width: usize, index: usize) -> Option<usize> {
         if index >= 1 {
             let res = index - 1;
-            if res / (width as usize) == index / (width as usize) {
+            if res / width == index / width {
                 Some(res)
             }
             else {
@@ -367,9 +367,9 @@ mod util {
         }
     }
 
-    pub fn right(map: &[MapCell], width: u16, index: usize) -> Option<usize> {
+    pub fn right(map: &[MapCell], width: usize, index: usize) -> Option<usize> {
         let res = index + 1;
-        if res < map.len() && res / (width as usize) == index / (width as usize) {
+        if res < map.len() && res / width  == index / width {
             Some(res)
         }
         else {
