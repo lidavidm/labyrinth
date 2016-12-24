@@ -205,7 +205,7 @@ impl specs::System<()> for RenderSystem {
         let (map, mut renderers, cameras) = arg.fetch(|world| {
             let map = world.read_resource::<Map>();
             let renderers = world.write::<MapRender>();
-            let cameras = world.write::<Camera>();
+            let cameras = world.read::<Camera>();
             (map, renderers, cameras)
         });
 
@@ -226,6 +226,8 @@ impl BuilderSystem {
 impl specs::System<()> for BuilderSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
+        use voodoo::color::ColorValue;
+        use voodoo::window::TermCell;
 
         if self.can_create_entity {
             let (entities, mut builders, mut movables, mut positions, mut drawables) = arg.fetch(|world| {
@@ -251,7 +253,7 @@ impl specs::System<()> for BuilderSystem {
             let new_entity = arg.create();
             movables.insert(new_entity, super::input::Movable);
             positions.insert(new_entity, super::position::Position { x: 50, y: 50 });
-            drawables.insert(new_entity, super::drawable::StaticDrawable { tc: '@'.into() });
+            drawables.insert(new_entity, super::drawable::StaticDrawable { tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green) });
 
             self.can_create_entity = false;
 
@@ -270,7 +272,7 @@ impl specs::System<()> for BuilderSystem {
                 self.can_create_entity = true;
             }
 
-            for _ in 0..10 {
+            for _ in 0..25 {
                 if let Some((index, cell)) = map_builder.modified_cells.pop_front() {
                     map.map[index] = cell;
                 }
