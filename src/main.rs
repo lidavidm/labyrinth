@@ -47,13 +47,19 @@ fn run() -> f64 {
     let mut planner = specs::Planner::<()>::new(world, 2);
     let (input_system, key_event_channel) = components::input::InputSystem::new();
     planner.add_system(input_system, "input", 100);
+    planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);
 
     planner.mut_world().create_now()
         .with(components::camera::Camera::new((80, 24), (100, 100)))
         .with(components::map::MapRender::new(Window::new(Point::new(0, 0), WIDTH, HEIGHT)))
+        .with(components::drawable::DrawableRender::new(voodoo::overlay::Overlay::new(Point::new(0, 0), WIDTH, HEIGHT)))
         .with(components::map::MapBuilder::new());
+
+    planner.mut_world().create_now()
+        .with(components::position::Position { x: 0, y: 0 })
+        .with(components::drawable::StaticDrawable { tc: '@'.into() });
 
     let (terminal, stdin, mut stdout) = Terminal::new();
     terminal.cursor(Mode::Disabled);
@@ -89,9 +95,16 @@ fn run() -> f64 {
             planner.dispatch(());
         }
 
-        let maps = planner.mut_world().read::<components::map::MapRender>();
-        for map in maps.iter() {
-            map.refresh(&mut compositor);
+        // TODO: better solution here!
+        {
+            let maps = planner.mut_world().read::<components::map::MapRender>();
+            for map in maps.iter() {
+                map.refresh(&mut compositor);
+            }
+        }
+        let drawables = planner.mut_world().read::<components::drawable::DrawableRender>();
+        for drawable in drawables.iter() {
+            drawable.refresh(&mut compositor);
         }
 
         compositor.display(&mut stdout);

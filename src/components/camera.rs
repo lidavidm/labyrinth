@@ -24,6 +24,13 @@ impl Camera {
     pub fn max_y(&self) -> u16 {
         self.area.1 as u16 - self.view.1
     }
+
+    pub fn is_visible(&self, position: &super::position::Position) -> bool {
+        return position.x >= self.position.x as usize &&
+            position.y >= self.position.y as usize &&
+            position.x < (self.position.x + self.view.0) as usize &&
+            position.y < (self.position.y + self.view.1) as usize;
+    }
 }
 
 impl specs::Component for Camera {
