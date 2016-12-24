@@ -5,6 +5,8 @@ use specs;
 use voodoo::compositor::Compositor;
 use voodoo::window::{Point, Window};
 
+use super::camera::Camera;
+
 #[derive(Clone,Copy,Debug,Eq,PartialEq)]
 pub enum MapCell {
     Null,
@@ -19,7 +21,6 @@ pub struct Map {
 }
 
 pub struct MapRender {
-    pub position: Point,
     window: Window,
 }
 
@@ -48,26 +49,18 @@ impl Map {
 impl MapRender {
     pub fn new(window: Window) -> MapRender {
         MapRender {
-            position: Point::new(0, 0),
             window: window,
         }
     }
 
-    pub fn max_x(&self, map: &Map) -> u16 {
-        map.width as u16 - self.window.width
-    }
-
-    pub fn max_y(&self, map: &Map) -> u16 {
-        map.height as u16 - self.window.height
-    }
-
-    pub fn render(&mut self, map: &Map) {
+    pub fn render(&mut self, map: &Map, camera: &Camera) {
         use self::MapCell::*;
 
+        // TODO: use camera view (need Rect structs)
         for row_offset in 0..self.window.height {
-            let start = (row_offset + self.position.y) as usize * map.width;
+            let start = (row_offset + camera.position.y) as usize * map.width;
             for col_offset in 0..self.window.width {
-                let offset = self.position.x as usize + start + col_offset as usize;
+                let offset = camera.position.x as usize + start + col_offset as usize;
                 let y = row_offset;
                 let x = col_offset;
                 self.window.put_at(
@@ -200,14 +193,15 @@ impl specs::System<()> for RenderSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
 
-        let (map, mut renderers) = arg.fetch(|world| {
-            let renderers = world.write::<MapRender>();
+        let (map, mut renderers, cameras) = arg.fetch(|world| {
             let map = world.read_resource::<Map>();
-            (map, renderers)
+            let renderers = world.write::<MapRender>();
+            let cameras = world.write::<Camera>();
+            (map, renderers, cameras)
         });
 
-        for renderer in (&mut renderers).iter() {
-            renderer.render(&map);
+        for (renderer, camera) in (&mut renderers, &cameras).iter() {
+            renderer.render(&map, &camera);
         }
     }
 }

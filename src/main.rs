@@ -51,6 +51,7 @@ fn run() -> f64 {
     planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);
 
     planner.mut_world().create_now()
+        .with(components::camera::Camera::new((80, 24), (100, 100)))
         .with(components::map::MapRender::new(Window::new(Point::new(0, 0), WIDTH, HEIGHT)))
         .with(components::map::MapBuilder::new());
 
