@@ -16,6 +16,9 @@ pub struct Map {
     pub map: Vec<MapCell>,
     pub width: usize,
     pub height: usize,
+}
+
+pub struct MapRender {
     pub position: Point,
     window: Window,
 }
@@ -33,36 +36,43 @@ pub struct BuilderSystem {
 }
 
 impl Map {
-    pub fn new(width: usize, height: usize, window: Window) -> Map {
+    pub fn new(width: usize, height: usize) -> Map {
         Map {
             map: vec![MapCell::Null; width * height],
             width: width,
             height: height,
+        }
+    }
+}
+
+impl MapRender {
+    pub fn new(window: Window) -> MapRender {
+        MapRender {
             position: Point::new(0, 0),
             window: window,
         }
     }
 
-    pub fn max_x(&self) -> u16 {
-        self.width as u16 - self.window.width
+    pub fn max_x(&self, map: &Map) -> u16 {
+        map.width as u16 - self.window.width
     }
 
-    pub fn max_y(&self) -> u16 {
-        self.height as u16 - self.window.height
+    pub fn max_y(&self, map: &Map) -> u16 {
+        map.height as u16 - self.window.height
     }
 
-    pub fn render(&mut self) {
+    pub fn render(&mut self, map: &Map) {
         use self::MapCell::*;
 
         for row_offset in 0..self.window.height {
-            let start = (row_offset + self.position.y) as usize * self.width;
+            let start = (row_offset + self.position.y) as usize * map.width;
             for col_offset in 0..self.window.width {
                 let offset = self.position.x as usize + start + col_offset as usize;
                 let y = row_offset;
                 let x = col_offset;
                 self.window.put_at(
                     Point::new(x, y),
-                    match self.map[offset] {
+                    match map.map[offset] {
                         Null => ' ',
                         Wall => '#',
                         Floor => '·',
@@ -77,8 +87,8 @@ impl Map {
     }
 }
 
-impl specs::Component for Map {
-    type Storage = specs::VecStorage<Map>;
+impl specs::Component for MapRender {
+    type Storage = specs::VecStorage<MapRender>;
 }
 
 impl MapBuilder {
@@ -91,6 +101,7 @@ impl MapBuilder {
     }
 
     pub fn dig_feature(&mut self, map: &mut Map) {
+        // Based on http://www.roguebasin.com/index.php?title=Dungeon-Building_Algorithm
         use self::MapCell::*;
 
         if self.num_iterations == 0 {
@@ -189,10 +200,14 @@ impl specs::System<()> for RenderSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
 
-        let maps = &mut arg.fetch(|world| world.write::<Map>());
+        let (map, mut renderers) = arg.fetch(|world| {
+            let renderers = world.write::<MapRender>();
+            let map = world.read_resource::<Map>();
+            (map, renderers)
+        });
 
-        for ref mut map in maps.iter() {
-            map.render();
+        for renderer in (&mut renderers).iter() {
+            renderer.render(&map);
         }
     }
 }
@@ -208,14 +223,14 @@ impl specs::System<()> for BuilderSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
 
-        let (entities, mut maps, mut builders) = arg.fetch(|world| {
-            (world.entities(), world.write::<Map>(), world.write::<MapBuilder>())
+        let (mut map, entities, mut builders) = arg.fetch(|world| {
+            (world.write_resource::<Map>(), world.entities(), world.write::<MapBuilder>())
         });
 
         let mut to_remove = vec![];
-        for (entity, mut map, mut map_builder) in (&entities, &mut maps, &mut builders).iter() {
+        for (entity, mut map_builder) in (&entities, &mut builders).iter() {
             if map_builder.num_iterations < 100 {
-                map_builder.dig_feature(map);
+                map_builder.dig_feature(&mut map);
             }
             else if map_builder.modified_cells.len() == 0 {
                 to_remove.push(entity);

@@ -43,6 +43,7 @@ fn run() -> f64 {
 
     let mut world = specs::World::new();
     components::register_all(&mut world);
+    world.add_resource(components::map::Map::new(100, 100));
     let mut planner = specs::Planner::<()>::new(world, 2);
     let (input_system, key_event_channel) = components::input::InputSystem::new();
     planner.add_system(input_system, "input", 100);
@@ -50,7 +51,7 @@ fn run() -> f64 {
     planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);
 
     planner.mut_world().create_now()
-        .with(components::map::Map::new(100, 100, Window::new(Point::new(0, 0), WIDTH, HEIGHT)))
+        .with(components::map::MapRender::new(Window::new(Point::new(0, 0), WIDTH, HEIGHT)))
         .with(components::map::MapBuilder::new());
 
     let (terminal, stdin, mut stdout) = Terminal::new();
@@ -87,7 +88,7 @@ fn run() -> f64 {
             planner.dispatch(());
         }
 
-        let maps = planner.mut_world().read::<components::map::Map>();
+        let maps = planner.mut_world().read::<components::map::MapRender>();
         for map in maps.iter() {
             map.refresh(&mut compositor);
         }
