@@ -58,6 +58,7 @@ fn run() -> f64 {
         .with(components::map::MapBuilder::new());
 
     planner.mut_world().create_now()
+        .with(components::input::Movable)
         .with(components::position::Position { x: 0, y: 0 })
         .with(components::drawable::StaticDrawable { tc: '@'.into() });
 

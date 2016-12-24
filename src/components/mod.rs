@@ -12,6 +12,8 @@ pub fn register_all(world: &mut World) {
     world.register::<drawable::StaticDrawable>();
     world.register::<drawable::DrawableRender>();
 
+    world.register::<input::Movable>();
+
     world.register::<map::MapRender>();
     world.register::<map::MapBuilder>();
 
