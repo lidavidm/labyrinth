@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use rand::{self, Rng};
 use specs;
 use voodoo::compositor::Compositor;
-use voodoo::window::{Point, Window};
+use voodoo::window::{Point, TermCell, Window};
 
 use super::camera::Camera;
 
@@ -74,11 +74,11 @@ impl MapRender {
                 let x = col_offset;
                 self.window.put_at(
                     Point::new(x, y),
-                    match map.map[offset] {
+                    Into::<TermCell>::into((match map.map[offset] {
                         Null => ' ',
                         Wall => '#',
                         Floor => '·',
-                    }
+                    })).faint()
                 )
             }
         }
