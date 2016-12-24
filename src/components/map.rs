@@ -230,12 +230,14 @@ impl specs::System<()> for BuilderSystem {
         use voodoo::window::TermCell;
 
         if self.can_create_entity {
-            let (entities, mut builders, mut movables, mut positions, mut drawables) = arg.fetch(|world| {
-                (world.entities(),
-                 world.write::<MapBuilder>(),
-                 world.write::<super::input::Movable>(),
-                 world.write::<super::position::Position>(),
-                 world.write::<super::drawable::StaticDrawable>(),
+            let (map, entities, mut builders, mut movables, mut positions, mut drawables) = arg.fetch(|world| {
+                (
+                    world.read_resource::<Map>(),
+                    world.entities(),
+                    world.write::<MapBuilder>(),
+                    world.write::<super::input::Movable>(),
+                    world.write::<super::position::Position>(),
+                    world.write::<super::drawable::StaticDrawable>(),
                 )
             });
 
@@ -253,7 +255,31 @@ impl specs::System<()> for BuilderSystem {
             let new_entity = arg.create();
             movables.insert(new_entity, super::input::Movable);
             positions.insert(new_entity, super::position::Position { x: 50, y: 50 });
-            drawables.insert(new_entity, super::drawable::StaticDrawable { tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green) });
+            drawables.insert(new_entity, super::drawable::StaticDrawable {
+                tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green)
+            });
+
+            for _ in 0..100 {
+                for _ in 0..1000 {
+                    let index = rand::thread_rng().gen_range(0, map.map.len());
+                    if let MapCell::Floor = map.map[index] {
+                        let y = index / map.width;
+                        let x = index % map.width;
+
+                        // Don't spawn them close to the player
+                        if (x as i32 - 50).pow(2) + (y as i32 - 50).pow(2) < 36 {
+                            continue;
+                        }
+
+                        let e = arg.create();
+                        positions.insert(e, super::position::Position { x: x, y: y });
+                        drawables.insert(e, super::drawable::StaticDrawable {
+                            tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
+                        });
+                        break;
+                    }
+                }
+            }
 
             self.can_create_entity = false;
 
