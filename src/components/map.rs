@@ -44,6 +44,14 @@ impl Map {
             height: height,
         }
     }
+
+    pub fn passable(&self, x: usize, y: usize) -> bool {
+        let index = y * self.width + x;
+        match self.map.get(index) {
+            Some(&MapCell::Floor) => true,
+            _ => false,
+        }
+    }
 }
 
 impl MapRender {

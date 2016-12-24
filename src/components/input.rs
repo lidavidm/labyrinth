@@ -76,11 +76,10 @@ impl specs::System<()> for InputSystem {
                         let new_x = if new_x < 0 { 0 } else { new_x as usize };
                         let new_y = if new_y < 0 { 0 } else { new_y as usize };
 
-                        // let new_x = ::std::cmp::min(new_x, camera.max_x());
-                        // let new_y = ::std::cmp::min(new_y, camera.max_y());
-
-                        position.x = new_x;
-                        position.y = new_y;
+                        if map.passable(new_x, new_y) {
+                            position.x = new_x;
+                            position.y = new_y;
+                        }
                     }
                 }
 
