@@ -60,9 +60,12 @@ impl specs::System<()> for RenderSystem {
             (drawables, positions, cameras, targets)
         });
 
+        for target in (&mut targets).iter() {
+            target.overlay.clear();
+        }
+
         for (drawable, position) in (&drawables, &positions).iter() {
             for (camera, target) in (&cameras, &mut targets).iter() {
-                target.overlay.clear();
                 if let Some(point) = position.relative_to(&camera) {
                     target.overlay.put_at(point, drawable.tc);
                 }
