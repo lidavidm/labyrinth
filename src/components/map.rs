@@ -34,6 +34,7 @@ pub struct RenderSystem {
 }
 
 pub struct BuilderSystem {
+    can_create_entity: bool,
 }
 
 impl Map {
@@ -217,6 +218,7 @@ impl specs::System<()> for RenderSystem {
 impl BuilderSystem {
     pub fn new() -> BuilderSystem {
         BuilderSystem {
+            can_create_entity: false,
         }
     }
 }
@@ -225,17 +227,47 @@ impl specs::System<()> for BuilderSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
 
-        let (mut map, entities, mut builders) = arg.fetch(|world| {
-            (world.write_resource::<Map>(), world.entities(), world.write::<MapBuilder>())
+        if self.can_create_entity {
+            let (entities, mut builders, mut movables, mut positions, mut drawables) = arg.fetch(|world| {
+                (world.entities(),
+                 world.write::<MapBuilder>(),
+                 world.write::<super::input::Movable>(),
+                 world.write::<super::position::Position>(),
+                 world.write::<super::drawable::StaticDrawable>(),
+                )
+            });
+
+            let mut to_remove = vec![];
+            for (entity, builder) in (&entities, &builders).iter() {
+                if builder.modified_cells.len() == 0 {
+                    to_remove.push(entity);
+                }
+            }
+
+            for entity in to_remove {
+                builders.remove(entity);
+            }
+
+            let new_entity = arg.create();
+            movables.insert(new_entity, super::input::Movable);
+            positions.insert(new_entity, super::position::Position { x: 50, y: 50 });
+            drawables.insert(new_entity, super::drawable::StaticDrawable { tc: '@'.into() });
+
+            self.can_create_entity = false;
+
+            return;
+        }
+
+        let (mut map, mut builders) = arg.fetch(|world| {
+            (world.write_resource::<Map>(), world.write::<MapBuilder>())
         });
 
-        let mut to_remove = vec![];
-        for (entity, mut map_builder) in (&entities, &mut builders).iter() {
+        for map_builder in (&mut builders).iter() {
             if map_builder.num_iterations < 100 {
                 map_builder.dig_feature(&mut map);
             }
             else if map_builder.modified_cells.len() == 0 {
-                to_remove.push(entity);
+                self.can_create_entity = true;
             }
 
             for _ in 0..10 {
@@ -243,10 +275,6 @@ impl specs::System<()> for BuilderSystem {
                     map.map[index] = cell;
                 }
             }
-        }
-
-        for entity in to_remove {
-            builders.remove(entity);
         }
     }
 }

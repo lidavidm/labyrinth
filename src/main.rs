@@ -57,11 +57,6 @@ fn run() -> f64 {
         .with(components::drawable::DrawableRender::new(voodoo::overlay::Overlay::new(Point::new(0, 0), WIDTH, HEIGHT)))
         .with(components::map::MapBuilder::new());
 
-    planner.mut_world().create_now()
-        .with(components::input::Movable)
-        .with(components::position::Position { x: 0, y: 0 })
-        .with(components::drawable::StaticDrawable { tc: '@'.into() });
-
     let (terminal, stdin, mut stdout) = Terminal::new();
     terminal.cursor(Mode::Disabled);
     terminal.clear_color(ColorValue::Black);
