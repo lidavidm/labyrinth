@@ -16,6 +16,7 @@ pub enum MapCell {
 
 pub struct Map {
     pub map: Vec<MapCell>,
+    pub contents: Vec<Option<()>>,
     pub width: usize,
     pub height: usize,
 }
@@ -41,6 +42,7 @@ impl Map {
     pub fn new(width: usize, height: usize) -> Map {
         Map {
             map: vec![MapCell::Null; width * height],
+            contents: vec![None; width * height],
             width: width,
             height: height,
         }
@@ -48,10 +50,20 @@ impl Map {
 
     pub fn passable(&self, x: usize, y: usize) -> bool {
         let index = y * self.width + x;
-        match self.map.get(index) {
-            Some(&MapCell::Floor) => true,
+        match (self.map.get(index), self.contents.get(index)) {
+            (Some(&MapCell::Floor), Some(&None)) => true,
             _ => false,
         }
+    }
+
+    pub fn vacate(&mut self, x: usize, y: usize) {
+        let index = y * self.width + x;
+        self.contents[index] = None;
+    }
+
+    pub fn fill(&mut self, x: usize, y: usize) {
+        let index = y * self.width + x;
+        self.contents[index] = Some(());
     }
 }
 
@@ -230,9 +242,9 @@ impl specs::System<()> for BuilderSystem {
         use voodoo::window::TermCell;
 
         if self.can_create_entity {
-            let (map, entities, mut builders, mut movables, mut positions, mut drawables) = arg.fetch(|world| {
+            let (mut map, entities, mut builders, mut movables, mut positions, mut drawables) = arg.fetch(|world| {
                 (
-                    world.read_resource::<Map>(),
+                    world.write_resource::<Map>(),
                     world.entities(),
                     world.write::<MapBuilder>(),
                     world.write::<super::input::Movable>(),
@@ -254,7 +266,7 @@ impl specs::System<()> for BuilderSystem {
 
             let new_entity = arg.create();
             movables.insert(new_entity, super::input::Movable);
-            positions.insert(new_entity, super::position::Position { x: 50, y: 50 });
+            positions.insert(new_entity, super::position::Position::new(&mut map, 50, 50).unwrap());
             drawables.insert(new_entity, super::drawable::StaticDrawable {
                 tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green)
             });
@@ -267,12 +279,17 @@ impl specs::System<()> for BuilderSystem {
                         let x = index % map.width;
 
                         // Don't spawn them close to the player
-                        if (x as i32 - 50).pow(2) + (y as i32 - 50).pow(2) < 36 {
+                        if (x as i32 - 50).pow(2) + (y as i32 - 50).pow(2) < 49 {
+                            continue;
+                        }
+
+                        // Don't spawn them on occupied cells
+                        if !map.passable(x, y) {
                             continue;
                         }
 
                         let e = arg.create();
-                        positions.insert(e, super::position::Position { x: x, y: y });
+                        positions.insert(e, super::position::Position::new(&mut map, x, y).unwrap());
                         drawables.insert(e, super::drawable::StaticDrawable {
                             tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
                         });

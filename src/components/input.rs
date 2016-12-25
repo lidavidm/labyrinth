@@ -26,8 +26,8 @@ impl specs::System<()> for InputSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
 
-        let (map, mut cameras, movables, mut positions) = arg.fetch(|world| {
-            (world.read_resource::<super::map::Map>(),
+        let (mut map, mut cameras, movables, mut positions) = arg.fetch(|world| {
+            (world.write_resource::<super::map::Map>(),
              world.write::<super::camera::Camera>(),
              world.read::<Movable>(),
              world.write::<super::position::Position>())
@@ -76,10 +76,7 @@ impl specs::System<()> for InputSystem {
                         let new_x = if new_x < 0 { 0 } else { new_x as usize };
                         let new_y = if new_y < 0 { 0 } else { new_y as usize };
 
-                        if map.passable(new_x, new_y) {
-                            position.x = new_x;
-                            position.y = new_y;
-                        }
+                        let _ = position.move_to(new_x, new_y, &mut map);
                     }
                 }
 
