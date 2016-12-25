@@ -242,7 +242,12 @@ impl specs::System<()> for BuilderSystem {
         use voodoo::window::TermCell;
 
         if self.can_create_entity {
-            let (mut map, entities, mut builders, mut movables, mut positions, mut drawables) = arg.fetch(|world| {
+            let (
+                mut map, entities,
+                mut builders, mut movables,
+                mut positions, mut drawables,
+                mut healths, mut focused,
+            ) = arg.fetch(|world| {
                 (
                     world.write_resource::<Map>(),
                     world.entities(),
@@ -250,6 +255,8 @@ impl specs::System<()> for BuilderSystem {
                     world.write::<super::input::Movable>(),
                     world.write::<super::position::Position>(),
                     world.write::<super::drawable::StaticDrawable>(),
+                    world.write::<super::health::Health>(),
+                    world.write::<super::ui::Focus>(),
                 )
             });
 
@@ -270,6 +277,8 @@ impl specs::System<()> for BuilderSystem {
             drawables.insert(new_entity, super::drawable::StaticDrawable {
                 tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green)
             });
+            healths.insert(new_entity, super::health::Health::new(10, 10, 100, 100));
+            focused.insert(new_entity, super::ui::Focus);
 
             for _ in 0..100 {
                 for _ in 0..1000 {

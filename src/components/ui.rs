@@ -38,9 +38,17 @@ impl specs::System<()> for InfoPanelSystem {
             (world.write_resource::<InfoPanelResource>(), world.read::<Focus>(), world.read::<super::health::Health>())
         });
 
-        res.window.print_at(Point::new(1, 0), "HP: ");
-        let mut s: FormattedString = "    10/10     ".into();
-        s.bg = Some(ColorValue::Red);
-        res.window.print_at(Point::new(5, 0), s);
+        for (_, health) in (&focus, &health).iter() {
+            res.window.print_at(Point::new(1, 0), "Health ");
+            res.window.print_at(Point::new(1, 1), "Stamina");
+            let h = format!("{:30}", format!("{}/{}", health.health, health.max_health));
+            let s = format!("{:30}", format!("{}/{}", health.stamina, health.max_stamina));
+            let mut hfs: FormattedString = (&h).into();
+            let mut sfs: FormattedString = (&s).into();
+            hfs.bg = Some(ColorValue::Red);
+            sfs.bg = Some(ColorValue::Green);
+            res.window.print_at(Point::new(9, 0), hfs);
+            res.window.print_at(Point::new(9, 1), sfs);
+        }
     }
 }
