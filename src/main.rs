@@ -15,6 +15,9 @@ const TICK_TIME: u64 = MS * 25;
 const WIDTH: u16 = 80;
 const HEIGHT: u16 = 24;
 
+const MAP_WIDTH: u16 = 38;
+const MAP_HEIGHT: u16 = 18;
+
 fn async_events<R: std::io::Read + Send + 'static>(stdin: R) -> mpsc::Receiver<std::io::Result<termion::event::Event>> {
     use termion::input::TermRead;
 
@@ -51,10 +54,12 @@ fn run() -> f64 {
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);
 
+    let mut map_frame = Window::new(Point::new(0, 0), MAP_WIDTH + 2, MAP_HEIGHT + 2);
+    map_frame.border();
     planner.mut_world().create_now()
-        .with(components::camera::Camera::new((80, 24), (100, 100)))
-        .with(components::map::MapRender::new(Window::new(Point::new(0, 0), WIDTH, HEIGHT)))
-        .with(components::drawable::DrawableRender::new(voodoo::overlay::Overlay::new(Point::new(0, 0), WIDTH, HEIGHT)))
+        .with(components::camera::Camera::new((MAP_WIDTH, MAP_HEIGHT), (100, 100)))
+        .with(components::map::MapRender::new(Window::new(Point::new(1, 1), MAP_WIDTH, MAP_HEIGHT)))
+        .with(components::drawable::DrawableRender::new(voodoo::overlay::Overlay::new(Point::new(1, 1), MAP_WIDTH, MAP_HEIGHT)))
         .with(components::map::MapBuilder::new());
 
     let (terminal, stdin, mut stdout) = Terminal::new();
@@ -92,6 +97,7 @@ fn run() -> f64 {
         }
 
         // TODO: better solution here!
+        map_frame.refresh(&mut compositor);
         {
             let maps = planner.mut_world().read::<components::map::MapRender>();
             for map in maps.iter() {
