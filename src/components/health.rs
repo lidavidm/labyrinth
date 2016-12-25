@@ -2,13 +2,13 @@ use specs;
 
 pub struct Health {
     pub health: usize,
-    pub stamina: usize,
+    pub stamina: f32,
     pub max_health: usize,
-    pub max_stamina: usize,
+    pub max_stamina: f32,
 }
 
 impl Health {
-    pub fn new(health: usize, max_health: usize, stamina: usize, max_stamina: usize) -> Health {
+    pub fn new(health: usize, max_health: usize, stamina: f32, max_stamina: f32) -> Health {
         Health {
             health: health,
             stamina: stamina,

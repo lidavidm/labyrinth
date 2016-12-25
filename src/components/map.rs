@@ -277,7 +277,7 @@ impl specs::System<()> for BuilderSystem {
             drawables.insert(new_entity, super::drawable::StaticDrawable {
                 tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green)
             });
-            healths.insert(new_entity, super::health::Health::new(10, 10, 100, 100));
+            healths.insert(new_entity, super::health::Health::new(10, 10, 100.0, 100.0));
             focused.insert(new_entity, super::ui::Focus);
 
             for _ in 0..100 {
