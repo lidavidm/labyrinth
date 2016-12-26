@@ -61,8 +61,11 @@ fn run() -> f64 {
 
     let mut map_frame = Window::new(Point::new(0, 0), MAP_WIDTH + 2, MAP_HEIGHT + 2);
     map_frame.border();
+
+    let mut camera = components::camera::Camera::new((MAP_WIDTH, MAP_HEIGHT), (100, 100));
+    camera.center_on(50, 50);
     planner.mut_world().create_now()
-        .with(components::camera::Camera::new((MAP_WIDTH, MAP_HEIGHT), (100, 100)))
+        .with(camera)
         .with(components::map::MapRender::new(Window::new(Point::new(1, 1), MAP_WIDTH, MAP_HEIGHT)))
         .with(components::drawable::DrawableRender::new(voodoo::overlay::Overlay::new(Point::new(1, 1), MAP_WIDTH, MAP_HEIGHT)))
         .with(components::map::MapBuilder::new());
