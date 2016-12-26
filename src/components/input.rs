@@ -19,6 +19,7 @@ pub struct InputSystem {
     panel_state: PanelState,
 }
 
+#[derive(Clone,Copy)]
 enum PanelState {
     Toplevel,
     Targeting,
@@ -65,6 +66,16 @@ impl InputSystem {
             let _ = position.move_to(new_x, new_y, map);
         }
     }
+
+    fn process_command(&self, key: Key) -> PanelState {
+        use self::PanelState::*;
+
+        match (self.panel_state, key) {
+            (Toplevel, Key::Char('3')) => Targeting,
+            (Targeting, Key::Char('q')) => Toplevel,
+            _ => Toplevel,
+        }
+    }
 }
 
 impl specs::System<()> for InputSystem {
@@ -108,6 +119,10 @@ impl specs::System<()> for InputSystem {
                 }
 
                 Key::Char('1') | Key::Char('2') | Key::Char('3') |
+                Key::Char('q') => {
+                    self.panel_state = self.process_command(key);
+                }
+
                 Key::Char('I') | Key::Char('B') | Key::Char('T') |
                 Key::Char('F') => {
                 }
@@ -118,6 +133,7 @@ impl specs::System<()> for InputSystem {
 
         match self.panel_state {
             Toplevel => {
+                res.window.clear();
                 res.window.print_at(Point::new(0, 0), "WASD—Move");
                 res.window.print_at(Point::new(0, 1), "   1—Examine");
                 res.window.print_at(Point::new(0, 2), "   2—Interact");
@@ -130,7 +146,11 @@ impl specs::System<()> for InputSystem {
             }
 
             Targeting => {
-
+                res.window.clear();
+                res.window.print_at(Point::new(0, 0), "    q—Cancel");
+                res.window.print_at(Point::new(0, 1), " WASD—Manual Aim");
+                res.window.print_at(Point::new(0, 2), "  Tab—Cycle Target");
+                res.window.print_at(Point::new(0, 3), "Space—Confirm Fire");
             }
         }
     }
