@@ -4,7 +4,8 @@ extern crate termion;
 extern crate time;
 extern crate voodoo;
 
-mod components;
+pub mod components;
+pub mod util;
 
 use std::sync::mpsc;
 use std::thread;
@@ -51,9 +52,7 @@ fn run() -> f64 {
     world.add_resource(components::ui::CommandPanelResource::new(Window::new(Point::new(0, MAP_HEIGHT + 2), WIDTH, 4)));
     let mut planner = specs::Planner::<()>::new(world, 2);
     let (input_system, key_event_channel) = components::input::InputSystem::new();
-    let (command_system, command_event_channel) = components::ui::CommandPanelSystem::new();
     planner.add_system(input_system, "input", 100);
-    planner.add_system(command_system, "command", 100);
     planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);

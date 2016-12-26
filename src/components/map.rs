@@ -137,7 +137,7 @@ impl MapBuilder {
             }
         }
         else {
-            use self::util::Direction;
+            use ::util::Direction;
             'testing: for _ in 0..1000 {
                 let index = rand::thread_rng().gen_range(0, self.actual_map.len());
                 if let Wall = self.actual_map[index] {
@@ -335,30 +335,22 @@ impl specs::System<()> for BuilderSystem {
 }
 
 mod util {
+    use ::util::Direction;
     use super::MapCell;
 
-    pub enum Direction {
-        Up,
-        Down,
-        Left,
-        Right,
-    }
-
-    impl Direction {
-        pub fn to_index(&self, map: &[MapCell], width: usize, cur: usize) -> Option<usize> {
-            match *self {
-                Direction::Down => {
-                    below(map, width, cur)
-                }
-                Direction::Up => {
-                    above(map, width, cur)
-                }
-                Direction::Right => {
-                    right(map, width, cur)
-                }
-                Direction::Left => {
-                    left(map, width, cur)
-                }
+    pub fn direction_to_index(direction: Direction, map: &[MapCell], width: usize, cur: usize) -> Option<usize> {
+        match direction {
+            Direction::Down => {
+                below(map, width, cur)
+            }
+            Direction::Up => {
+                above(map, width, cur)
+            }
+            Direction::Right => {
+                right(map, width, cur)
+            }
+            Direction::Left => {
+                left(map, width, cur)
             }
         }
     }
@@ -378,7 +370,7 @@ mod util {
         let mut cur = start_point;
 
         for r in 0..height {
-            let new_index = direction.to_index(actual_map, map_width, cur)
+            let new_index = direction_to_index(direction, actual_map, map_width, cur)
                 .and_then(|idx| if actual_map[idx] != Null { None } else { Some(idx) });
 
             if let Some(idx) = new_index {
