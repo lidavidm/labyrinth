@@ -302,6 +302,7 @@ impl specs::System<()> for BuilderSystem {
                         drawables.insert(e, super::drawable::StaticDrawable {
                             tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
                         });
+                        healths.insert(e, super::health::Health::new(3, 3, 100.0, 100.0));
                         break;
                     }
                 }
