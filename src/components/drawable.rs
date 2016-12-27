@@ -165,7 +165,7 @@ impl Octant {
             O3 => SignedPos { x: -x, y: y },
             O4 => SignedPos { x: -x, y: -y },
             O5 => SignedPos { x: -y, y: -x },
-            O6 => SignedPos { x: -y, y: x },
+            O6 => SignedPos { x: y, y: -x },
             O7 => SignedPos { x: x, y: -y },
         }
     }
