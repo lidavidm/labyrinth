@@ -56,6 +56,14 @@ impl Map {
         }
     }
 
+    pub fn occupable(&self, x: usize, y: usize) -> bool {
+        let index = y * self.width + x;
+        match self.map.get(index) {
+            Some(&MapCell::Floor) => true,
+            _ => false,
+        }
+    }
+
     pub fn vacate(&mut self, x: usize, y: usize) {
         let index = y * self.width + x;
         self.contents[index] = None;

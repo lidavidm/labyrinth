@@ -1,6 +1,7 @@
 use specs;
 use voodoo;
 
+#[derive(Clone,Copy,Debug,Eq,PartialEq)]
 pub struct Position {
     pub x: usize,
     pub y: usize,

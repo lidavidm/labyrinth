@@ -11,6 +11,7 @@ pub mod ui;
 pub fn register_all(world: &mut World) {
     world.register::<camera::Camera>();
 
+    world.register::<drawable::LineDrawable>();
     world.register::<drawable::StaticDrawable>();
     world.register::<drawable::DrawableRender>();
 
