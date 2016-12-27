@@ -4,6 +4,7 @@ use specs;
 use termion::event::Key;
 use voodoo::window::Point;
 
+use ::systems::ui;
 use ::util::Direction;
 use super::map::Map;
 use super::position::Position;
@@ -73,7 +74,7 @@ impl specs::System<()> for InputSystem {
 
         let (mut res, mut map, entities, mut cameras, focused, mut movables, mut positions, mut lines) = arg.fetch(|world| {
             (
-                world.write_resource::<super::ui::CommandPanelResource>(),
+                world.write_resource::<ui::CommandPanelResource>(),
                 world.write_resource::<super::map::Map>(),
                 world.entities(),
                 world.write::<super::camera::Camera>(),

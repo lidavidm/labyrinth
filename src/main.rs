@@ -5,6 +5,7 @@ extern crate time;
 extern crate voodoo;
 
 pub mod components;
+pub mod systems;
 pub mod util;
 
 use std::sync::mpsc;
@@ -48,15 +49,15 @@ fn run() -> f64 {
     let mut world = specs::World::new();
     components::register_all(&mut world);
     world.add_resource(components::map::Map::new(100, 100));
-    world.add_resource(components::ui::InfoPanelResource::new(Window::new(Point::new(MAP_WIDTH + 2, 0), 80 - 2 - MAP_WIDTH, 2)));
-    world.add_resource(components::ui::CommandPanelResource::new(Window::new(Point::new(0, MAP_HEIGHT + 2), MAP_WIDTH + 2, 4)));
+    world.add_resource(systems::ui::InfoPanelResource::new(Window::new(Point::new(MAP_WIDTH + 2, 0), 80 - 2 - MAP_WIDTH, 2)));
+    world.add_resource(systems::ui::CommandPanelResource::new(Window::new(Point::new(0, MAP_HEIGHT + 2), MAP_WIDTH + 2, 4)));
     let mut planner = specs::Planner::<()>::new(world, 2);
     let (input_system, key_event_channel) = components::input::InputSystem::new();
     planner.add_system(input_system, "input", 100);
     planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);
-    planner.add_system(components::ui::InfoPanelSystem::new(), "info_panel", 1);
+    planner.add_system(systems::ui::InfoPanelSystem::new(), "info_panel", 1);
 
     let mut map_frame = Window::new(Point::new(0, 0), MAP_WIDTH + 2, MAP_HEIGHT + 2);
     map_frame.border();
@@ -112,8 +113,8 @@ fn run() -> f64 {
         map_frame.refresh(&mut compositor);
         msg_frame.refresh(&mut compositor);
         let world = planner.mut_world();
-        let info = world.read_resource::<components::ui::InfoPanelResource>();
-        let command = world.read_resource::<components::ui::CommandPanelResource>();
+        let info = world.read_resource::<systems::ui::InfoPanelResource>();
+        let command = world.read_resource::<systems::ui::CommandPanelResource>();
         let maps = world.read::<components::map::MapRender>();
         let drawables = world.read::<components::drawable::DrawableRender>();
         info.window.refresh(&mut compositor);
