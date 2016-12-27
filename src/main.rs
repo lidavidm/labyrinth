@@ -48,8 +48,8 @@ fn run() -> f64 {
     let mut world = specs::World::new();
     components::register_all(&mut world);
     world.add_resource(components::map::Map::new(100, 100));
-    world.add_resource(components::ui::InfoPanelResource::new(Window::new(Point::new(MAP_WIDTH + 2, 0), 80 - 2 - MAP_WIDTH, HEIGHT - 4)));
-    world.add_resource(components::ui::CommandPanelResource::new(Window::new(Point::new(0, MAP_HEIGHT + 2), WIDTH, 4)));
+    world.add_resource(components::ui::InfoPanelResource::new(Window::new(Point::new(MAP_WIDTH + 2, 0), 80 - 2 - MAP_WIDTH, 2)));
+    world.add_resource(components::ui::CommandPanelResource::new(Window::new(Point::new(0, MAP_HEIGHT + 2), MAP_WIDTH + 2, 4)));
     let mut planner = specs::Planner::<()>::new(world, 2);
     let (input_system, key_event_channel) = components::input::InputSystem::new();
     planner.add_system(input_system, "input", 100);
@@ -60,6 +60,12 @@ fn run() -> f64 {
 
     let mut map_frame = Window::new(Point::new(0, 0), MAP_WIDTH + 2, MAP_HEIGHT + 2);
     map_frame.border();
+    map_frame.print_at(Point::new(1, 0), "MAP");
+    let mut msg_frame = Window::new(Point::new(MAP_WIDTH + 2, 2), WIDTH - 2 - MAP_WIDTH, HEIGHT - 2);
+    msg_frame.border();
+    msg_frame.print_at(Point::new(1, 0), "MESSAGES");
+    let y = msg_frame.height - 1;
+    msg_frame.print_at(Point::new(1, y), "PgUp/Down—Scroll");
 
     let mut camera = components::camera::Camera::new((MAP_WIDTH, MAP_HEIGHT), (100, 100));
     camera.center_on(50, 50);
@@ -104,6 +110,7 @@ fn run() -> f64 {
         }
 
         map_frame.refresh(&mut compositor);
+        msg_frame.refresh(&mut compositor);
         let world = planner.mut_world();
         let info = world.read_resource::<components::ui::InfoPanelResource>();
         let command = world.read_resource::<components::ui::CommandPanelResource>();
