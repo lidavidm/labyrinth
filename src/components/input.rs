@@ -14,6 +14,10 @@ impl specs::Component for Movable {
     type Storage = specs::VecStorage<Movable>;
 }
 
+pub trait OffsetMovable {
+    fn move_by(&mut self, offset: (i32, i32), map: &mut Map) -> Result<(), ()>;
+}
+
 pub struct InputSystem {
     pub inputs: mpsc::Receiver<Key>,
     panel_state: PanelState,
@@ -51,29 +55,13 @@ impl InputSystem {
         }
     }
 
-    fn process_movement<'a, I>(&self, direction: Direction, map: &mut Map, movables: I)
-        where I: Iterator<Item=(&'a Movable, &'a mut Position)> {
+    fn process_movement<'a, OM, I>(&self, direction: Direction, map: &mut Map, movables: I)
+        where OM: 'a + OffsetMovable,
+              I: Iterator<Item=(&'a Movable, &'a mut OM)> {
         let offset = direction.offset();
 
-        for (_, position) in movables {
-            // TODO: factor out common movement code?
-            let new_x = position.x as i32 + offset.0;
-            let new_y = position.y as i32 + offset.1;
-
-            let new_x = if new_x < 0 { 0 } else { new_x as usize };
-            let new_y = if new_y < 0 { 0 } else { new_y as usize };
-
-            let _ = position.move_to(new_x, new_y, map);
-        }
-    }
-
-    fn process_command(&self, key: Key) -> PanelState {
-        use self::PanelState::*;
-
-        match (self.panel_state, key) {
-            (Toplevel, Key::Char('3')) => Targeting,
-            (Targeting, Key::Char('q')) => Toplevel,
-            _ => Toplevel,
+        for (_, movable) in movables {
+            let _ = movable.move_by(offset, map);
         }
     }
 }
@@ -83,13 +71,16 @@ impl specs::System<()> for InputSystem {
         use specs::Join;
         use self::PanelState::*;
 
-        let (mut res, mut map, mut cameras, movables, mut positions) = arg.fetch(|world| {
+        let (mut res, mut map, entities, mut cameras, focused, mut movables, mut positions, mut lines) = arg.fetch(|world| {
             (
                 world.write_resource::<super::ui::CommandPanelResource>(),
                 world.write_resource::<super::map::Map>(),
+                world.entities(),
                 world.write::<super::camera::Camera>(),
-                world.read::<Movable>(),
+                world.read::<super::ui::Focus>(),
+                world.write::<Movable>(),
                 world.write::<Position>(),
+                world.write::<super::drawable::LineDrawable>(),
             )
         });
 
@@ -116,11 +107,36 @@ impl specs::System<()> for InputSystem {
                     };
 
                     self.process_movement(dir, &mut map, (&movables, &mut positions).iter());
+                    self.process_movement(dir, &mut map, (&movables, &mut lines).iter());
                 }
 
                 Key::Char('1') | Key::Char('2') | Key::Char('3') |
                 Key::Char('q') => {
-                    self.panel_state = self.process_command(key);
+                    self.panel_state = match (self.panel_state, key) {
+                        (Toplevel, Key::Char('3')) => {
+                            movables.clear();
+
+                            let mut start_pos = Position { x: 0, y: 0 };
+                            for (_, pos) in (&focused, &positions).iter() {
+                                start_pos.x = pos.x;
+                                start_pos.y = pos.y;
+                            }
+
+                            let e = arg.create();
+                            lines.insert(e, super::drawable::LineDrawable {
+                                start: start_pos,
+                                end: start_pos,
+                            });
+                            movables.insert(e, Movable);
+                            Targeting
+                        },
+                        (Targeting, Key::Char('q')) => {
+                            // TODO: need to delete entities
+                            movables.clear();
+                            Toplevel
+                        },
+                        _ => Toplevel,
+                    };
                 }
 
                 Key::Char('I') | Key::Char('B') | Key::Char('T') |

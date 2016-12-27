@@ -47,3 +47,15 @@ impl Position {
 impl specs::Component for Position {
     type Storage = specs::VecStorage<Position>;
 }
+
+impl super::input::OffsetMovable for Position {
+    fn move_by(&mut self, offset: (i32, i32), map: &mut super::map::Map) -> Result<(), ()> {
+        let new_x = self.x as i32 + offset.0;
+        let new_y = self.y as i32 + offset.1;
+
+        let new_x = if new_x < 0 { 0 } else { new_x as usize };
+        let new_y = if new_y < 0 { 0 } else { new_y as usize };
+
+        self.move_to(new_x, new_y, map)
+    }
+}

@@ -38,6 +38,23 @@ impl specs::Component for LineDrawable {
     type Storage = specs::VecStorage<LineDrawable>;
 }
 
+impl super::input::OffsetMovable for LineDrawable {
+    fn move_by(&mut self, offset: (i32, i32), map: &mut Map) -> Result<(), ()> {
+        use std::cmp::min;
+
+        let new_x = self.end.x as i32 + offset.0;
+        let new_y = self.end.y as i32 + offset.1;
+
+        let new_x = if new_x < 0 { 0 } else { min(new_x as usize, map.width) };
+        let new_y = if new_y < 0 { 0 } else { min(new_y as usize, map.height) };
+
+        self.end.x = new_x;
+        self.end.y = new_y;
+
+        Ok(())
+    }
+}
+
 impl DrawableRender {
     pub fn new(overlay: Overlay) -> DrawableRender {
         DrawableRender {
@@ -81,11 +98,15 @@ impl specs::System<()> for RenderSystem {
 
         for line in (&lines).iter() {
             for (camera, target) in (&cameras, &mut targets).iter() {
-                let points = bresenham(&map, line.start, line.end);
-                for point in points {
-                    if let Some(point) = point.relative_to(&camera) {
+                let points = bresenham(line.start, line.end);
+                for coord in points {
+                    if let Some(point) = coord.relative_to(&camera) {
                         let mut tc: TermCell = ' '.into();
-                        tc.bg = Some(ColorValue::Magenta);
+                        tc.bg = Some(if map.occupable(coord.x, coord.y) {
+                            ColorValue::Magenta
+                        } else {
+                            ColorValue::Red
+                        });
                         target.overlay.put_at(point, tc);
                     }
                 }
@@ -150,19 +171,14 @@ impl Octant {
     }
 }
 
-fn bresenham(map: &Map, start: Position, end: Position) -> Vec<Position> {
+fn bresenham(start: Position, end: Position) -> Vec<Position> {
     use std::cmp::{min, max};
 
     let mut result = Vec::new();
     // Vertical line special case
     if start.x == end.x {
         for y in min(start.y, end.y)..max(start.y, end.y) + 1 {
-            if map.passable(start.x, y) {
-                result.push(Position { x: start.x, y: y });
-            }
-            else {
-                break;
-            }
+            result.push(Position { x: start.x, y: y });
         }
     }
 
@@ -222,18 +238,13 @@ fn bresenham(map: &Map, start: Position, end: Position) -> Vec<Position> {
     let mut err = derr - 0.5;
     let mut y = 0;
 
-    for x in 0..end.x {
+    for x in 0..end.x + 1 {
         let offset = octant.invert(SignedPos { x: x, y: y });
         let pos = Position {
             x: (start.x as i32 + offset.x) as usize,
             y: (start.y as i32 + offset.y) as usize,
         };
-        if map.occupable(pos.x, pos.y) {
-            result.push(pos);
-        }
-        else {
-            break;
-        }
+        result.push(pos);
         err += derr;
 
         if err >= 0.5 {
