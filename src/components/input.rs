@@ -131,8 +131,12 @@ impl specs::System<()> for InputSystem {
                             Targeting
                         },
                         (Targeting, Key::Char('q')) => {
-                            // TODO: need to delete entities
-                            movables.clear();
+                            for (entity, _) in (&entities, &movables).iter() {
+                                arg.delete(entity);
+                            }
+                            for (entity, _) in (&entities, &focused).iter() {
+                                movables.insert(entity, Movable);
+                            }
                             Toplevel
                         },
                         _ => Toplevel,
