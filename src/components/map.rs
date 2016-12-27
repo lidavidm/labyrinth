@@ -441,7 +441,7 @@ mod util {
         Some(cells)
     }
 
-    pub fn above(map: &[MapCell], width: usize, index: usize) -> Option<usize> {
+    pub fn above(_map: &[MapCell], width: usize, index: usize) -> Option<usize> {
         if index >= width {
             Some(index - width)
         }
@@ -460,7 +460,7 @@ mod util {
         }
     }
 
-    pub fn left(map: &[MapCell], width: usize, index: usize) -> Option<usize> {
+    pub fn left(_map: &[MapCell], width: usize, index: usize) -> Option<usize> {
         if index >= 1 {
             let res = index - 1;
             if res / width == index / width {
