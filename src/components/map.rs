@@ -256,24 +256,61 @@ impl specs::System<()> for BuilderSystem {
             self.message_queue.send("Placing player and enemies…".into()).unwrap();
 
             let (
-                mut map, entities,
-                mut players,
-                mut chasers,
-                mut builders, mut movables,
-                mut positions, mut drawables,
-                mut healths, mut focused,
+                entities,
+                mut builders,
             ) = arg.fetch(|world| {
+                let mut map = world.write_resource::<Map>();
+
+                let mut equip = super::player::Equip::new();
+                equip.left_hand = Some(super::player::Item {
+                    name: "Xinhai Pistol".into(),
+                });
+
+                world.create_later_build()
+                    .with(super::input::Movable)
+                    .with(super::player::Player::new())
+                    .with(equip)
+                    .with(super::input::Movable)
+                    .with(super::position::Position::new(&mut map, 50, 50).unwrap())
+                    .with(super::drawable::StaticDrawable {
+                        tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green)
+                    })
+                    .with(super::health::Health::new(10, 10, 100.0, 100.0))
+                    .with(super::ui::Focus);
+
+                for _ in 0..100 {
+                    for _ in 0..1000 {
+                        let index = rand::thread_rng().gen_range(0, map.map.len());
+                        if let MapCell::Floor = map.map[index] {
+                            let y = index / map.width;
+                            let x = index % map.width;
+
+                            // Don't spawn them close to the player
+                            if (x as i32 - 50).pow(2) + (y as i32 - 50).pow(2) < 49 {
+                                continue;
+                            }
+
+                            // Don't spawn them on occupied cells
+                            if !map.passable(x, y) {
+                                continue;
+                            }
+
+                            world.create_later_build()
+                                .with(super::ai::ChaseBehavior::new())
+                                .with(super::player::Equip::new())
+                                .with(super::position::Position::new(&mut map, x, y).unwrap())
+                                .with(super::drawable::StaticDrawable {
+                                    tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
+                                })
+                                .with(super::health::Health::new(3, 3, 100.0, 100.0));
+                            break;
+                        }
+                    }
+                }
+
                 (
-                    world.write_resource::<Map>(),
                     world.entities(),
-                    world.write::<super::player::Player>(),
-                    world.write::<super::ai::ChaseBehavior>(),
                     world.write::<MapBuilder>(),
-                    world.write::<super::input::Movable>(),
-                    world.write::<super::position::Position>(),
-                    world.write::<super::drawable::StaticDrawable>(),
-                    world.write::<super::health::Health>(),
-                    world.write::<super::ui::Focus>(),
                 )
             });
 
@@ -286,45 +323,6 @@ impl specs::System<()> for BuilderSystem {
 
             for entity in to_remove {
                 builders.remove(entity);
-            }
-
-            let new_entity = arg.create();
-            players.insert(new_entity, super::player::Player);
-            movables.insert(new_entity, super::input::Movable);
-            positions.insert(new_entity, super::position::Position::new(&mut map, 50, 50).unwrap());
-            drawables.insert(new_entity, super::drawable::StaticDrawable {
-                tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green)
-            });
-            healths.insert(new_entity, super::health::Health::new(10, 10, 100.0, 100.0));
-            focused.insert(new_entity, super::ui::Focus);
-
-            for _ in 0..100 {
-                for _ in 0..1000 {
-                    let index = rand::thread_rng().gen_range(0, map.map.len());
-                    if let MapCell::Floor = map.map[index] {
-                        let y = index / map.width;
-                        let x = index % map.width;
-
-                        // Don't spawn them close to the player
-                        if (x as i32 - 50).pow(2) + (y as i32 - 50).pow(2) < 49 {
-                            continue;
-                        }
-
-                        // Don't spawn them on occupied cells
-                        if !map.passable(x, y) {
-                            continue;
-                        }
-
-                        let e = arg.create();
-                        chasers.insert(e, super::ai::ChaseBehavior::new());
-                        positions.insert(e, super::position::Position::new(&mut map, x, y).unwrap());
-                        drawables.insert(e, super::drawable::StaticDrawable {
-                            tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
-                        });
-                        healths.insert(e, super::health::Health::new(3, 3, 100.0, 100.0));
-                        break;
-                    }
-                }
             }
 
             self.can_create_entity = false;
