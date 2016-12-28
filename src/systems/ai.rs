@@ -1,13 +1,35 @@
+use std::sync::mpsc;
 use specs::{self, Join};
 
 use ::components::{ai, map, player, position};
 use ::components::input::OffsetMovable;
 use ::util;
 
-pub struct AiSystem;
+pub struct AiSystem {
+    ai_begin: mpsc::Receiver<()>,
+    ai_end: mpsc::Sender<()>,
+}
+
+impl AiSystem {
+    pub fn new(ai_begin: mpsc::Receiver<()>, ai_end: mpsc::Sender<()>) -> AiSystem {
+        AiSystem {
+            ai_begin: ai_begin,
+            ai_end: ai_end,
+        }
+    }
+}
 
 impl specs::System<()> for AiSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
+        if let Ok(()) = self.ai_begin.try_recv() {
+
+        }
+        else {
+            // Required to make specs not panic
+            arg.fetch(|_| {});
+            return;
+        }
+
         let (mut map, mut chase_behaviors, players, mut positions) = arg.fetch(|world| {
             (
                 world.write_resource::<map::Map>(),
@@ -47,5 +69,7 @@ impl specs::System<()> for AiSystem {
                 chaser.spotted = None;
             }
         }
+
+        self.ai_end.send(()).unwrap();
     }
 }

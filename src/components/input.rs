@@ -22,6 +22,9 @@ pub trait OffsetMovable {
 pub struct InputSystem {
     pub inputs: mpsc::Receiver<Key>,
     message_queue: mpsc::Sender<String>,
+    ai_begin: mpsc::Sender<()>,
+    ai_end: mpsc::Receiver<()>,
+    ai_turn: bool,
     panel_state: PanelState,
 }
 
@@ -32,11 +35,14 @@ enum PanelState {
 }
 
 impl InputSystem {
-    pub fn new(message_queue: mpsc::Sender<String>) -> (InputSystem, mpsc::Sender<Key>) {
+    pub fn new(message_queue: mpsc::Sender<String>, ai_begin: mpsc::Sender<()>, ai_end: mpsc::Receiver<()>) -> (InputSystem, mpsc::Sender<Key>) {
         let (tx, rx) = mpsc::channel();
         (InputSystem {
             inputs: rx,
             message_queue: message_queue,
+            ai_begin: ai_begin,
+            ai_end: ai_end,
+            ai_turn: false,
             panel_state: PanelState::Toplevel,
         }, tx)
     }
@@ -58,14 +64,18 @@ impl InputSystem {
         }
     }
 
-    fn process_movement<'a, OM, I>(&self, direction: Direction, map: &mut Map, movables: I)
+    fn process_movement<'a, OM, I>(&self, direction: Direction, map: &mut Map, movables: I) -> bool
         where OM: 'a + OffsetMovable,
               I: Iterator<Item=(&'a Movable, &'a mut OM)> {
+        let mut moved = false;
         let offset = direction.offset();
 
         for (_, movable) in movables {
             let _ = movable.move_by(offset, map);
+            moved = true;
         }
+
+        moved
     }
 }
 
@@ -73,6 +83,17 @@ impl specs::System<()> for InputSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
         use self::PanelState::*;
+
+        if self.ai_turn {
+            if let Ok(()) = self.ai_end.try_recv() {
+                self.ai_turn = false;
+            }
+            else {
+                // Required to make specs not panic
+                arg.fetch(|_| {});
+                return;
+            }
+        }
 
         let (mut res, mut map, entities, mut cameras, focused, mut movables, mut positions, mut lines) = arg.fetch(|world| {
             (
@@ -109,7 +130,10 @@ impl specs::System<()> for InputSystem {
                         _ => unreachable!(),
                     };
 
-                    self.process_movement(dir, &mut map, (&movables, &mut positions).iter());
+                    if self.process_movement(dir, &mut map, (&movables, &mut positions).iter()) {
+                        self.ai_begin.send(()).unwrap();
+                        self.ai_turn = true;
+                    }
                     self.process_movement(dir, &mut map, (&movables, &mut lines).iter());
                 }
 

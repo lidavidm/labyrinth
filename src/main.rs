@@ -71,12 +71,15 @@ fn run() -> f64 {
         planner.add_system(sys, "messages", 1);
         res
     };
-    let (input_system, key_event_channel) = components::input::InputSystem::new(msg_resource.clone());
+    let (ab_tx, ab_rx) = mpsc::channel();
+    let (ae_tx, ae_rx) = mpsc::channel();
+
+    let (input_system, key_event_channel) = components::input::InputSystem::new(msg_resource.clone(), ab_tx, ae_rx);
     planner.add_system(input_system, "input", 100);
     planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(msg_resource.clone()), "map_build", 20);
-    planner.add_system(systems::ai::AiSystem, "ai", 1);
+    planner.add_system(systems::ai::AiSystem::new(ab_rx, ae_tx), "ai", 1);
     planner.add_system(systems::ui::InfoPanelSystem::new(), "info_panel", 1);
 
     // Add default entities
