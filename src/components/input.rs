@@ -25,11 +25,11 @@ pub struct InputSystem {
     ai_begin: mpsc::Sender<()>,
     ai_end: mpsc::Receiver<()>,
     ai_turn: bool,
-    panel_state: PanelState,
+    state: State,
 }
 
 #[derive(Clone,Copy)]
-enum PanelState {
+enum State {
     Toplevel,
     Targeting,
 }
@@ -43,7 +43,7 @@ impl InputSystem {
             ai_begin: ai_begin,
             ai_end: ai_end,
             ai_turn: false,
-            panel_state: PanelState::Toplevel,
+            state: State::Toplevel,
         }, tx)
     }
 
@@ -82,7 +82,7 @@ impl InputSystem {
 impl specs::System<()> for InputSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
-        use self::PanelState::*;
+        use self::State::*;
 
         if self.ai_turn {
             if let Ok(()) = self.ai_end.try_recv() {
@@ -108,39 +108,38 @@ impl specs::System<()> for InputSystem {
             )
         });
 
-        for key in self.inputs.try_iter() {
-            match key {
-                Key::Up | Key::Down | Key::Left | Key::Right => {
-                    let dir = match key {
-                        Key::Up => Direction::Up,
-                        Key::Down => Direction::Down,
-                        Key::Left => Direction::Left,
-                        Key::Right => Direction::Right,
-                        _ => unreachable!(),
-                    };
-                    self.process_panning(dir, (&mut cameras).iter());
-                }
+        match self.state {
+            Toplevel => {
+                for key in self.inputs.try_iter() {
+                    match key {
+                        Key::Up | Key::Down | Key::Left | Key::Right => {
+                            let dir = match key {
+                                Key::Up => Direction::Up,
+                                Key::Down => Direction::Down,
+                                Key::Left => Direction::Left,
+                                Key::Right => Direction::Right,
+                                _ => unreachable!(),
+                            };
+                            self.process_panning(dir, (&mut cameras).iter());
+                        }
 
-                Key::Char('w') | Key::Char('a') | Key::Char('s') | Key::Char('d') => {
-                    let dir = match key {
-                        Key::Char('w') => Direction::Up,
-                        Key::Char('s') => Direction::Down,
-                        Key::Char('a') => Direction::Left,
-                        Key::Char('d') => Direction::Right,
-                        _ => unreachable!(),
-                    };
+                        Key::Char('w') | Key::Char('a') | Key::Char('s') | Key::Char('d') => {
+                            let dir = match key {
+                                Key::Char('w') => Direction::Up,
+                                Key::Char('s') => Direction::Down,
+                                Key::Char('a') => Direction::Left,
+                                Key::Char('d') => Direction::Right,
+                                _ => unreachable!(),
+                            };
 
-                    if self.process_movement(dir, &mut map, (&movables, &mut positions).iter()) {
-                        self.ai_begin.send(()).unwrap();
-                        self.ai_turn = true;
-                    }
-                    self.process_movement(dir, &mut map, (&movables, &mut lines).iter());
-                }
+                            if self.process_movement(dir, &mut map, (&movables, &mut positions).iter()) {
+                                self.ai_begin.send(()).unwrap();
+                                self.ai_turn = true;
+                                break;
+                            }
+                        }
 
-                Key::Char('1') | Key::Char('2') | Key::Char('3') |
-                Key::Char('q') => {
-                    self.panel_state = match (self.panel_state, key) {
-                        (Toplevel, Key::Char('3')) => {
+                        Key::Char('3') => {
                             movables.clear();
 
                             let mut start_pos = Position { x: 0, y: 0 };
@@ -155,30 +154,68 @@ impl specs::System<()> for InputSystem {
                                 end: start_pos,
                             });
                             movables.insert(e, Movable);
-                            Targeting
-                        },
-                        (Targeting, Key::Char('q')) => {
-                            for (entity, _) in (&entities, &movables).iter() {
+                            self.state = Targeting;
+                            break;
+                        }
+
+                        _ => {}
+                    }
+                }
+            }
+
+            Targeting => {
+                for key in self.inputs.try_iter() {
+                    match key {
+                        Key::Up | Key::Down | Key::Left | Key::Right => {
+                            let dir = match key {
+                                Key::Up => Direction::Up,
+                                Key::Down => Direction::Down,
+                                Key::Left => Direction::Left,
+                                Key::Right => Direction::Right,
+                                _ => unreachable!(),
+                            };
+                            self.process_panning(dir, (&mut cameras).iter());
+                        }
+
+                        Key::Char('w') | Key::Char('a') | Key::Char('s') | Key::Char('d') => {
+                            let dir = match key {
+                                Key::Char('w') => Direction::Up,
+                                Key::Char('s') => Direction::Down,
+                                Key::Char('a') => Direction::Left,
+                                Key::Char('d') => Direction::Right,
+                                _ => unreachable!(),
+                            };
+                            self.process_movement(dir, &mut map, (&movables, &mut lines).iter());
+                        }
+
+                        Key::Char('3') | Key::Char(' ') => {
+                            let mut end = Position { x: 0, y: 0 };
+                            for (entity, line, _) in (&entities, &lines, &movables).iter() {
+                                end = line.end;
                                 arg.delete(entity);
                             }
                             for (entity, _) in (&entities, &focused).iter() {
                                 movables.insert(entity, Movable);
                             }
-                            Toplevel
-                        },
-                        _ => Toplevel,
-                    };
-                }
+                            self.state = Toplevel;
 
-                Key::Char('I') | Key::Char('B') | Key::Char('T') |
-                Key::Char('F') => {
-                }
+                            if key == Key::Char(' ') {
+                                self.message_queue.send(format!("Targeted {}, {}", end.x, end.y)).unwrap();
+                                self.ai_begin.send(()).unwrap();
+                                self.ai_turn = true;
+                                break;
+                            }
 
-                _ => continue,
+                            break;
+                        }
+
+                        _ => {}
+                    }
+                }
             }
         }
 
-        match self.panel_state {
+        match self.state {
             Toplevel => {
                 res.window.clear();
                 res.window.print_at(Point::new(0, 0), "WASD—Move");
