@@ -17,3 +17,7 @@ impl Direction {
         }
     }
 }
+
+pub fn distance2(a: (usize, usize), b: (usize, usize)) -> usize {
+    ((a.0 as i32 - b.0 as i32).pow(2) + (a.1 as i32 - b.1 as i32).pow(2)) as usize
+}

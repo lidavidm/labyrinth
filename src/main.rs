@@ -76,6 +76,7 @@ fn run() -> f64 {
     planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(msg_resource.clone()), "map_build", 20);
+    planner.add_system(systems::ai::AiSystem, "ai", 1);
     planner.add_system(systems::ui::InfoPanelSystem::new(), "info_panel", 1);
 
     // Add default entities

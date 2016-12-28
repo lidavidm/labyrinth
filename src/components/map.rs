@@ -257,6 +257,8 @@ impl specs::System<()> for BuilderSystem {
 
             let (
                 mut map, entities,
+                mut players,
+                mut chasers,
                 mut builders, mut movables,
                 mut positions, mut drawables,
                 mut healths, mut focused,
@@ -264,6 +266,8 @@ impl specs::System<()> for BuilderSystem {
                 (
                     world.write_resource::<Map>(),
                     world.entities(),
+                    world.write::<super::player::Player>(),
+                    world.write::<super::ai::ChaseBehavior>(),
                     world.write::<MapBuilder>(),
                     world.write::<super::input::Movable>(),
                     world.write::<super::position::Position>(),
@@ -285,6 +289,7 @@ impl specs::System<()> for BuilderSystem {
             }
 
             let new_entity = arg.create();
+            players.insert(new_entity, super::player::Player);
             movables.insert(new_entity, super::input::Movable);
             positions.insert(new_entity, super::position::Position::new(&mut map, 50, 50).unwrap());
             drawables.insert(new_entity, super::drawable::StaticDrawable {
@@ -311,6 +316,7 @@ impl specs::System<()> for BuilderSystem {
                         }
 
                         let e = arg.create();
+                        chasers.insert(e, super::ai::ChaseBehavior::new());
                         positions.insert(e, super::position::Position::new(&mut map, x, y).unwrap());
                         drawables.insert(e, super::drawable::StaticDrawable {
                             tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
