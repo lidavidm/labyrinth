@@ -21,6 +21,7 @@ pub trait OffsetMovable {
 
 pub struct InputSystem {
     pub inputs: mpsc::Receiver<Key>,
+    message_queue: mpsc::Sender<String>,
     panel_state: PanelState,
 }
 
@@ -31,10 +32,11 @@ enum PanelState {
 }
 
 impl InputSystem {
-    pub fn new() -> (InputSystem, mpsc::Sender<Key>) {
+    pub fn new(message_queue: mpsc::Sender<String>) -> (InputSystem, mpsc::Sender<Key>) {
         let (tx, rx) = mpsc::channel();
         (InputSystem {
             inputs: rx,
+            message_queue: message_queue,
             panel_state: PanelState::Toplevel,
         }, tx)
     }

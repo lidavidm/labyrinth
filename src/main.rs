@@ -51,13 +51,6 @@ fn run() -> f64 {
     world.add_resource(components::map::Map::new(100, 100));
     world.add_resource(systems::ui::InfoPanelResource::new(Window::new(Point::new(MAP_WIDTH + 2, 0), 80 - 2 - MAP_WIDTH, 2)));
     world.add_resource(systems::ui::CommandPanelResource::new(Window::new(Point::new(0, MAP_HEIGHT + 2), MAP_WIDTH + 2, 4)));
-    let mut planner = specs::Planner::<()>::new(world, 2);
-    let (input_system, key_event_channel) = components::input::InputSystem::new();
-    planner.add_system(input_system, "input", 100);
-    planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
-    planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
-    planner.add_system(components::map::BuilderSystem::new(), "map_build", 20);
-    planner.add_system(systems::ui::InfoPanelSystem::new(), "info_panel", 1);
 
     let mut map_frame = Window::new(Point::new(0, 0), MAP_WIDTH + 2, MAP_HEIGHT + 2);
     map_frame.border();
@@ -67,7 +60,25 @@ fn run() -> f64 {
     msg_frame.print_at(Point::new(1, 0), "MESSAGES");
     let y = msg_frame.height - 1;
     msg_frame.print_at(Point::new(1, y), "PgUp/Down—Scroll");
+    let point = Point::new(msg_frame.position.x + 1, msg_frame.position.y + 1);
+    world.add_resource(systems::ui::MessagesPanelResource::new(Window::new(point, msg_frame.width - 2, msg_frame.height - 2)));
 
+    let mut planner = specs::Planner::<()>::new(world, 2);
+
+    // Setup systems
+    let msg_resource = {
+        let (sys, res) = systems::ui::MessagesPanelSystem::new();
+        planner.add_system(sys, "messages", 1);
+        res
+    };
+    let (input_system, key_event_channel) = components::input::InputSystem::new(msg_resource.clone());
+    planner.add_system(input_system, "input", 100);
+    planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
+    planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
+    planner.add_system(components::map::BuilderSystem::new(msg_resource.clone()), "map_build", 20);
+    planner.add_system(systems::ui::InfoPanelSystem::new(), "info_panel", 1);
+
+    // Add default entities
     let mut camera = components::camera::Camera::new((MAP_WIDTH, MAP_HEIGHT), (100, 100));
     camera.center_on(50, 50);
     planner.mut_world().create_now()
@@ -76,6 +87,7 @@ fn run() -> f64 {
         .with(components::drawable::DrawableRender::new(voodoo::overlay::Overlay::new(Point::new(1, 1), MAP_WIDTH, MAP_HEIGHT)))
         .with(components::map::MapBuilder::new());
 
+    // Initialize the console
     let (terminal, stdin, mut stdout) = Terminal::new();
     terminal.cursor(Mode::Disabled);
     terminal.clear_color(ColorValue::Black);
@@ -115,10 +127,12 @@ fn run() -> f64 {
         let world = planner.mut_world();
         let info = world.read_resource::<systems::ui::InfoPanelResource>();
         let command = world.read_resource::<systems::ui::CommandPanelResource>();
+        let messages = world.read_resource::<systems::ui::MessagesPanelResource>();
         let maps = world.read::<components::map::MapRender>();
         let drawables = world.read::<components::drawable::DrawableRender>();
         info.window.refresh(&mut compositor);
         command.window.refresh(&mut compositor);
+        messages.window.refresh(&mut compositor);
         for map in maps.iter() {
             map.refresh(&mut compositor);
         }

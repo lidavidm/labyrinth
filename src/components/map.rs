@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::sync::mpsc;
 
 use rand::{self, Rng};
 use specs;
@@ -36,6 +37,7 @@ pub struct RenderSystem {
 
 pub struct BuilderSystem {
     can_create_entity: bool,
+    message_queue: mpsc::Sender<String>,
 }
 
 impl Map {
@@ -236,9 +238,10 @@ impl specs::System<()> for RenderSystem {
 }
 
 impl BuilderSystem {
-    pub fn new() -> BuilderSystem {
+    pub fn new(message_queue: mpsc::Sender<String>) -> BuilderSystem {
         BuilderSystem {
             can_create_entity: false,
+            message_queue: message_queue,
         }
     }
 }
@@ -250,6 +253,8 @@ impl specs::System<()> for BuilderSystem {
         use voodoo::window::TermCell;
 
         if self.can_create_entity {
+            self.message_queue.send("Placing player and enemies…".into()).unwrap();
+
             let (
                 mut map, entities,
                 mut builders, mut movables,
@@ -326,6 +331,10 @@ impl specs::System<()> for BuilderSystem {
         });
 
         for map_builder in (&mut builders).iter() {
+            if map_builder.num_iterations == 0 {
+                self.message_queue.send("Generating map…".into()).unwrap();
+            }
+
             if map_builder.num_iterations < 100 {
                 map_builder.dig_feature(&mut map);
             }
