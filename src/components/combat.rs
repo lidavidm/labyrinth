@@ -1,9 +1,10 @@
 use specs;
 
-#[derive(Clone,Copy,Debug,Default,Eq,PartialEq)]
+#[derive(Clone,Copy,Debug,Eq,PartialEq)]
 pub struct Attack {
     pub damage: (usize, usize),
     pub accuracy: usize,
+    pub source: specs::Entity,
 }
 
 impl specs::Component for Attack {

@@ -3,7 +3,7 @@ use std::sync::mpsc;
 use rand::{self, Rng};
 use specs::{self, Join};
 
-use ::components::{ai, combat, health, map, position};
+use ::components::{ai, combat, health, map, player, position};
 
 pub struct CombatSystem {
     message_queue: mpsc::Sender<String>,
@@ -19,10 +19,11 @@ impl CombatSystem {
 
 impl specs::System<()> for CombatSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
-        let (entities, mut map, mut chasers, mut attacked, mut healths, positions) = arg.fetch(|world| {
+        let (entities, mut map, players, mut chasers, mut attacked, mut healths, positions) = arg.fetch(|world| {
             (
                 world.entities(),
                 world.write_resource::<map::Map>(),
+                world.read::<player::Player>(),
                 world.write::<ai::ChaseBehavior>(),
                 world.write::<combat::Attack>(),
                 world.write::<health::Health>(),
@@ -39,7 +40,14 @@ impl specs::System<()> for CombatSystem {
                 arg.delete(entity);
             }
             else {
-                // TODO: if not player, add chase behavior
+                // If not player, add chase behavior
+                if let None = players.get(entity) {
+                    if let Some(pos) = positions.get(attack.source) {
+                        chasers.insert(entity, ai::ChaseBehavior {
+                            spotted: Some((pos.x, pos.y)),
+                        });
+                    }
+                }
                 health.health -= damage;
                 self.message_queue.send(format!("Hit for {} damage, {} left", damage, health.health)).unwrap();
             }

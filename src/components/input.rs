@@ -252,22 +252,28 @@ impl specs::System<()> for InputSystem {
                                 self.ai_begin.send(()).unwrap();
                                 self.ai_turn = true;
 
-                                let mut attack: super::combat::Attack = Default::default();
-                                for (_, equip) in (&focused, &equipped).iter() {
+                                let mut attack = None;
+                                for (entity, _, equip) in (&entities, &focused, &equipped).iter() {
                                     if let Some(super::player::Item {
                                         kind: super::player::ItemKind::Weapon {
                                             damage, accuracy
                                         },
                                         ..
                                     }) = equip.left_hand {
-                                        attack.damage = damage;
-                                        attack.accuracy = accuracy;
+                                        attack = Some(super::combat::Attack {
+                                            damage: damage,
+                                            accuracy: accuracy,
+                                            source: entity,
+                                        });
+                                        break;
                                     }
                                 }
 
-                                for (entity, pos, _health) in (&entities, &positions, &healths).iter() {
-                                    if pos.x == end.x && pos.y == end.y {
-                                        attacked.insert(entity, attack);
+                                if let Some(attack) = attack {
+                                    for (entity, pos, _health) in (&entities, &positions, &healths).iter() {
+                                        if pos.x == end.x && pos.y == end.y {
+                                            attacked.insert(entity, attack);
+                                        }
                                     }
                                 }
 
