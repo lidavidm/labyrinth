@@ -2,7 +2,7 @@ use std::sync::mpsc;
 
 use specs;
 use termion::event::Key;
-use voodoo::window::Point;
+use voodoo::window::{Point, Window};
 
 use ::systems::ui;
 use ::util::Direction;
@@ -77,6 +77,33 @@ impl InputSystem {
 
         moved
     }
+
+    fn render(&self, window: &mut Window) {
+        use self::State::*;
+
+        match self.state {
+            Toplevel => {
+                window.clear();
+                window.print_at(Point::new(0, 0), "WASD—Move");
+                window.print_at(Point::new(0, 1), "   1—Examine");
+                window.print_at(Point::new(0, 2), "   2—Interact");
+                window.print_at(Point::new(0, 3), "   3—Fire");
+
+                window.print_at(Point::new(14, 0), "I—Inventory");
+                window.print_at(Point::new(14, 1), "B—Build");
+                window.print_at(Point::new(14, 2), "T—Rest");
+                window.print_at(Point::new(14, 3), "F—Journal");
+            }
+
+            Targeting => {
+                window.clear();
+                window.print_at(Point::new(0, 0), "    q—Cancel");
+                window.print_at(Point::new(0, 1), " WASD—Manual Aim");
+                window.print_at(Point::new(0, 2), "  Tab—Cycle Target");
+                window.print_at(Point::new(0, 3), "Space—Confirm Fire");
+            }
+        }
+    }
 }
 
 impl specs::System<()> for InputSystem {
@@ -95,21 +122,19 @@ impl specs::System<()> for InputSystem {
             }
         }
 
-        let (mut res, mut map, entities, mut cameras, focused, mut movables, mut positions, mut lines) = arg.fetch(|world| {
-            (
-                world.write_resource::<ui::CommandPanelResource>(),
-                world.write_resource::<super::map::Map>(),
-                world.entities(),
-                world.write::<super::camera::Camera>(),
-                world.read::<super::ui::Focus>(),
-                world.write::<Movable>(),
-                world.write::<Position>(),
-                world.write::<super::drawable::LineDrawable>(),
-            )
-        });
-
         match self.state {
             Toplevel => {
+                let (mut res, mut map, mut cameras, focused, mut movables, mut positions, mut lines) = arg.fetch(|world| {
+                    (
+                        world.write_resource::<ui::CommandPanelResource>(),
+                        world.write_resource::<super::map::Map>(),
+                        world.write::<super::camera::Camera>(),
+                        world.read::<super::ui::Focus>(),
+                        world.write::<Movable>(),
+                        world.write::<Position>(),
+                        world.write::<super::drawable::LineDrawable>(),
+                    )
+                });
                 for key in self.inputs.try_iter() {
                     match key {
                         Key::Up | Key::Down | Key::Left | Key::Right => {
@@ -161,9 +186,32 @@ impl specs::System<()> for InputSystem {
                         _ => {}
                     }
                 }
+
+                self.render(&mut res.window);
             }
 
             Targeting => {
+                let (
+                    mut res, mut map, entities,
+                    mut cameras, focused, mut movables,
+                    positions, mut lines, healths,
+                    mut attacked, equipped,
+                ) = arg.fetch(|world| {
+                    (
+                        world.write_resource::<ui::CommandPanelResource>(),
+                        world.write_resource::<super::map::Map>(),
+                        world.entities(),
+                        world.write::<super::camera::Camera>(),
+                        world.read::<super::ui::Focus>(),
+                        world.write::<Movable>(),
+                        world.write::<Position>(),
+                        world.write::<super::drawable::LineDrawable>(),
+                        world.write::<super::health::Health>(),
+                        world.write::<super::combat::Attack>(),
+                        world.read::<super::player::Equip>(),
+                    )
+                });
+
                 for key in self.inputs.try_iter() {
                     match key {
                         Key::Up | Key::Down | Key::Left | Key::Right => {
@@ -203,6 +251,26 @@ impl specs::System<()> for InputSystem {
                                 self.message_queue.send(format!("Targeted {}, {}", end.x, end.y)).unwrap();
                                 self.ai_begin.send(()).unwrap();
                                 self.ai_turn = true;
+
+                                let mut attack: super::combat::Attack = Default::default();
+                                for (_, equip) in (&focused, &equipped).iter() {
+                                    if let Some(super::player::Item {
+                                        kind: super::player::ItemKind::Weapon {
+                                            damage, accuracy
+                                        },
+                                        ..
+                                    }) = equip.left_hand {
+                                        attack.damage = damage;
+                                        attack.accuracy = accuracy;
+                                    }
+                                }
+
+                                for (entity, pos, _health) in (&entities, &positions, &healths).iter() {
+                                    if pos.x == end.x && pos.y == end.y {
+                                        attacked.insert(entity, attack);
+                                    }
+                                }
+
                                 break;
                             }
 
@@ -212,29 +280,8 @@ impl specs::System<()> for InputSystem {
                         _ => {}
                     }
                 }
-            }
-        }
 
-        match self.state {
-            Toplevel => {
-                res.window.clear();
-                res.window.print_at(Point::new(0, 0), "WASD—Move");
-                res.window.print_at(Point::new(0, 1), "   1—Examine");
-                res.window.print_at(Point::new(0, 2), "   2—Interact");
-                res.window.print_at(Point::new(0, 3), "   3—Fire");
-
-                res.window.print_at(Point::new(14, 0), "I—Inventory");
-                res.window.print_at(Point::new(14, 1), "B—Build");
-                res.window.print_at(Point::new(14, 2), "T—Rest");
-                res.window.print_at(Point::new(14, 3), "F—Journal");
-            }
-
-            Targeting => {
-                res.window.clear();
-                res.window.print_at(Point::new(0, 0), "    q—Cancel");
-                res.window.print_at(Point::new(0, 1), " WASD—Manual Aim");
-                res.window.print_at(Point::new(0, 2), "  Tab—Cycle Target");
-                res.window.print_at(Point::new(0, 3), "Space—Confirm Fire");
+                self.render(&mut res.window);
             }
         }
     }

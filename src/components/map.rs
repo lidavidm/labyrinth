@@ -264,6 +264,10 @@ impl specs::System<()> for BuilderSystem {
                 let mut equip = super::player::Equip::new();
                 equip.left_hand = Some(super::player::Item {
                     name: "Xinhai Pistol".into(),
+                    kind: super::player::ItemKind::Weapon {
+                        damage: (1, 3),
+                        accuracy: 700,
+                    },
                 });
 
                 world.create_later_build()

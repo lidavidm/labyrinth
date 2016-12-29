@@ -1,13 +1,17 @@
 use specs;
 
 #[derive(Clone,Copy,Debug,Eq,PartialEq)]
-pub enum ItemType {
-    Weapon,
+pub enum ItemKind {
+    Weapon {
+        damage: (usize, usize),
+        accuracy: usize,
+    },
 }
 
-#[derive(Clone,Debug,Default,Eq,PartialEq)]
+#[derive(Clone,Debug,Eq,PartialEq)]
 pub struct Item {
     pub name: String,
+    pub kind: ItemKind,
 }
 
 #[derive(Clone,Debug,Default,Eq,PartialEq)]

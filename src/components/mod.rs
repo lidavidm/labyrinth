@@ -2,6 +2,7 @@ use specs::World;
 
 pub mod ai;
 pub mod camera;
+pub mod combat;
 pub mod drawable;
 pub mod health;
 pub mod input;
@@ -14,6 +15,8 @@ pub fn register_all(world: &mut World) {
     world.register::<ai::ChaseBehavior>();
 
     world.register::<camera::Camera>();
+
+    world.register::<combat::Attack>();
 
     world.register::<drawable::LineDrawable>();
     world.register::<drawable::StaticDrawable>();
