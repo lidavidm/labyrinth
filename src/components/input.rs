@@ -1,5 +1,6 @@
 use std::sync::mpsc;
 
+use rand::{self, Rng};
 use specs;
 use termion::event::Key;
 use voodoo::window::{Point, Window};
@@ -260,11 +261,16 @@ impl specs::System<()> for InputSystem {
                                         },
                                         ..
                                     }) = equip.left_hand {
-                                        attack = Some(super::combat::Attack {
-                                            damage: damage,
-                                            accuracy: accuracy,
-                                            source: entity,
-                                        });
+                                        if rand::thread_rng().gen_range(0, 1000) < accuracy {
+                                            attack = Some(super::combat::Attack {
+                                                damage: damage,
+                                                accuracy: accuracy,
+                                                source: entity,
+                                            });
+                                        }
+                                        else {
+                                            self.message_queue.send("You missed!".into()).unwrap();
+                                        }
                                         break;
                                     }
                                 }
