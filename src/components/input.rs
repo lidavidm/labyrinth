@@ -237,7 +237,7 @@ impl specs::System<()> for InputSystem {
                             self.process_movement(dir, &mut map, (&movables, &mut lines).iter());
                         }
 
-                        Key::Char('3') | Key::Char(' ') => {
+                        Key::Char('3') | Key::Char('q') | Key::Char(' ') => {
                             let mut points = None;
                             for (entity, line, _) in (&entities, &lines, &movables).iter() {
                                 points = Some(super::drawable::bresenham(line.start, line.end));
