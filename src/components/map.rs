@@ -17,7 +17,7 @@ pub enum MapCell {
 
 pub struct Map {
     pub map: Vec<MapCell>,
-    pub contents: Vec<Option<()>>,
+    pub contents: Vec<Option<specs::Entity>>,
     pub width: usize,
     pub height: usize,
 }
@@ -66,14 +66,16 @@ impl Map {
         }
     }
 
-    pub fn vacate(&mut self, x: usize, y: usize) {
+    pub fn vacate(&mut self, x: usize, y: usize) -> Option<specs::Entity> {
         let index = y * self.width + x;
+        let old = self.contents[index];
         self.contents[index] = None;
+        old
     }
 
-    pub fn fill(&mut self, x: usize, y: usize) {
+    pub fn fill(&mut self, entity: specs::Entity, x: usize, y: usize) {
         let index = y * self.width + x;
-        self.contents[index] = Some(());
+        self.contents[index] = Some(entity);
     }
 }
 
@@ -270,17 +272,19 @@ impl specs::System<()> for BuilderSystem {
                     },
                 });
 
-                world.create_later_build()
+                let entity = world.create_later_build()
                     .with(super::input::Movable)
                     .with(super::player::Player::new())
                     .with(equip)
                     .with(super::input::Movable)
-                    .with(super::position::Position::new(&mut map, 50, 50).unwrap())
+                    .with(super::position::Position::new(50, 50))
                     .with(super::drawable::StaticDrawable {
                         tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green)
                     })
                     .with(super::health::Health::new(10, 10, 100.0, 100.0))
-                    .with(super::ui::Focus);
+                    .with(super::ui::Focus)
+                    .build();
+                map.fill(entity, 50, 50);
 
                 for _ in 0..100 {
                     for _ in 0..1000 {
@@ -299,14 +303,16 @@ impl specs::System<()> for BuilderSystem {
                                 continue;
                             }
 
-                            world.create_later_build()
+                            let entity = world.create_later_build()
                                 .with(super::ai::ChaseBehavior::new())
                                 .with(super::player::Equip::new())
-                                .with(super::position::Position::new(&mut map, x, y).unwrap())
+                                .with(super::position::Position::new(x, y))
                                 .with(super::drawable::StaticDrawable {
                                     tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
                                 })
-                                .with(super::health::Health::new(3, 3, 100.0, 100.0));
+                                .with(super::health::Health::new(3, 3, 100.0, 100.0))
+                                .build();
+                            map.fill(entity, x, y);
                             break;
                         }
                     }

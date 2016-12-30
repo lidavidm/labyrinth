@@ -8,25 +8,19 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn new(map: &mut super::map::Map, x: usize, y: usize) -> Option<Position> {
-        if map.passable(x, y) {
-            map.fill(x, y);
-            Some(Position {
-                x: x,
-                y: y,
-            })
-        }
-        else {
-            None
+    pub fn new(x: usize, y: usize) -> Position {
+        Position {
+            x: x,
+            y: y,
         }
     }
 
     pub fn move_to(&mut self, x: usize, y: usize, map: &mut super::map::Map) -> Result<(), ()> {
         if map.passable(x, y) {
-            map.vacate(self.x, self.y);
+            let entity = map.vacate(self.x, self.y).unwrap();
             self.x = x;
             self.y = y;
-            map.fill(x, y);
+            map.fill(entity, x, y);
             Ok(())
         }
         else {
