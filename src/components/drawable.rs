@@ -171,7 +171,7 @@ impl Octant {
     }
 }
 
-fn bresenham(start: Position, end: Position) -> Vec<Position> {
+pub fn bresenham(start: Position, end: Position) -> Vec<Position> {
     use std::cmp::{min, max};
 
     let mut result = Vec::new();

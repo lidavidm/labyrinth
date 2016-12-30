@@ -238,9 +238,9 @@ impl specs::System<()> for InputSystem {
                         }
 
                         Key::Char('3') | Key::Char(' ') => {
-                            let mut end = Position { x: 0, y: 0 };
+                            let mut points = None;
                             for (entity, line, _) in (&entities, &lines, &movables).iter() {
-                                end = line.end;
+                                points = Some(super::drawable::bresenham(line.start, line.end));
                                 arg.delete(entity);
                             }
                             for (entity, _) in (&entities, &focused).iter() {
@@ -249,7 +249,6 @@ impl specs::System<()> for InputSystem {
                             self.state = Toplevel;
 
                             if key == Key::Char(' ') {
-                                self.message_queue.send(format!("Targeted {}, {}", end.x, end.y)).unwrap();
                                 self.ai_begin.send(()).unwrap();
                                 self.ai_turn = true;
 
@@ -276,10 +275,28 @@ impl specs::System<()> for InputSystem {
                                 }
 
                                 if let Some(attack) = attack {
-                                    for (entity, pos, _health) in (&entities, &positions, &healths).iter() {
-                                        if pos.x == end.x && pos.y == end.y {
-                                            attacked.insert(entity, attack);
+                                    let mut hit = false;
+                                    for target in points.unwrap().iter().skip(1) {
+                                        if !map.passable(target.x, target.y) {
+                                            for (entity, pos, _health) in (&entities, &positions, &healths).iter() {
+                                                if pos.x == target.x && pos.y == target.y {
+                                                    self.message_queue.send(format!("Targeted {}, {}", target.x, target.y)).unwrap();
+                                                    hit = true;
+                                                    attacked.insert(entity, attack);
+                                                }
+                                            }
+
+                                            if !hit {
+                                                hit = true;
+                                                self.message_queue.send("You hit a wall.".into()).unwrap();
+                                            }
+
+                                            break;
                                         }
+                                    }
+
+                                    if !hit {
+                                        self.message_queue.send("You hit nothing.".into()).unwrap();
                                     }
                                 }
 
