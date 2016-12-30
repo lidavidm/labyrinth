@@ -1,6 +1,5 @@
 use std::sync::mpsc;
 
-use rand::{self, Rng};
 use specs;
 use termion::event::Key;
 use voodoo::window::{Point, Window};
@@ -195,7 +194,7 @@ impl specs::System<()> for InputSystem {
                 let (
                     mut res, mut map, entities,
                     mut cameras, focused, mut movables,
-                    positions, mut lines, healths,
+                    mut lines, healths,
                     mut attacked, equipped,
                 ) = arg.fetch(|world| {
                     (
@@ -205,7 +204,6 @@ impl specs::System<()> for InputSystem {
                         world.write::<super::camera::Camera>(),
                         world.read::<super::ui::Focus>(),
                         world.write::<Movable>(),
-                        world.write::<Position>(),
                         world.write::<super::drawable::LineDrawable>(),
                         world.write::<super::health::Health>(),
                         world.write::<super::combat::Attack>(),
@@ -239,12 +237,14 @@ impl specs::System<()> for InputSystem {
 
                         Key::Char('3') | Key::Char('q') | Key::Char(' ') => {
                             let mut points = None;
+                            let mut attacker = None;
                             for (entity, line, _) in (&entities, &lines, &movables).iter() {
-                                points = Some(::util::bresenham(line.start, line.end));
+                                points = Some((line.start, line.end));
                                 arg.delete(entity);
                             }
                             for (entity, _) in (&entities, &focused).iter() {
                                 movables.insert(entity, Movable);
+                                attacker = Some((entity, equipped.get(entity).unwrap()));
                             }
                             self.state = Toplevel;
 
@@ -252,55 +252,31 @@ impl specs::System<()> for InputSystem {
                                 self.ai_begin.send(()).unwrap();
                                 self.ai_turn = true;
 
-                                let mut attack = None;
-                                for (entity, _, equip) in (&entities, &focused, &equipped).iter() {
-                                    if let Some(super::player::Item {
-                                        kind: super::player::ItemKind::Weapon {
-                                            damage, accuracy
-                                        },
-                                        ..
-                                    }) = equip.left_hand {
-                                        if rand::thread_rng().gen_range(0, 1000) < accuracy {
-                                            attack = Some(super::combat::Attack {
-                                                damage: damage,
-                                                accuracy: accuracy,
-                                                source: entity,
-                                            });
+                                if let (Some((start, end)), Some((attacker, equip))) = (points, attacker) {
+                                    match ::util::combat::resolve(&map, attacker, &equip, start, end, |entity| {
+                                        healths.get(entity).is_some()
+                                    }) {
+                                        ::util::combat::CombatResult::NothingEquipped => {
+                                            self.message_queue.send("You have nothing equipped!".into()).unwrap();
                                         }
-                                        else {
+                                        ::util::combat::CombatResult::Miss => {
                                             self.message_queue.send("You missed!".into()).unwrap();
                                         }
-                                        break;
-                                    }
-                                }
-
-                                if let Some(attack) = attack {
-                                    let mut hit = false;
-                                    for target in points.unwrap().iter().skip(1) {
-                                        if !map.passable(target.x, target.y) {
-                                            for (entity, pos, _health) in (&entities, &positions, &healths).iter() {
-                                                if pos.x == target.x && pos.y == target.y {
-                                                    self.message_queue.send(format!("Targeted {}, {}", target.x, target.y)).unwrap();
-                                                    hit = true;
-                                                    attacked.insert(entity, attack);
-                                                }
-                                            }
-
-                                            if !hit {
-                                                hit = true;
-                                                self.message_queue.send("You hit a wall.".into()).unwrap();
-                                            }
-
-                                            break;
+                                        ::util::combat::CombatResult::HitNothing => {
+                                            self.message_queue.send("You hit nothing.".into()).unwrap();
+                                        }
+                                        ::util::combat::CombatResult::HitEnvironment => {
+                                            self.message_queue.send("You hit a wall.".into()).unwrap();
+                                        }
+                                        ::util::combat::CombatResult::HitEntity(target, pos, attack) => {
+                                            self.message_queue.send(format!("Targeted {}, {}", pos.x, pos.y)).unwrap();
+                                            attacked.insert(target, attack);
                                         }
                                     }
-
-                                    if !hit {
-                                        self.message_queue.send("You hit nothing.".into()).unwrap();
-                                    }
                                 }
-
-                                break;
+                                else {
+                                    panic!("No attacker/no Equip/no target found? {:?} {:?}", points, attacker);
+                                }
                             }
 
                             break;

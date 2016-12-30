@@ -1,5 +1,7 @@
 use components::position::Position;
 
+pub mod combat;
+
 #[derive(Clone,Copy,Debug,Eq,PartialEq)]
 pub enum Direction {
     Up,

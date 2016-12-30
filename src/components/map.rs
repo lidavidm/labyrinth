@@ -66,6 +66,11 @@ impl Map {
         }
     }
 
+    pub fn contents(&self, x: usize, y: usize) -> Option<specs::Entity> {
+        let index = y * self.width + x;
+        self.contents[index]
+    }
+
     pub fn vacate(&mut self, x: usize, y: usize) -> Option<specs::Entity> {
         let index = y * self.width + x;
         let old = self.contents[index];
