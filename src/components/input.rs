@@ -240,7 +240,7 @@ impl specs::System<()> for InputSystem {
                         Key::Char('3') | Key::Char('q') | Key::Char(' ') => {
                             let mut points = None;
                             for (entity, line, _) in (&entities, &lines, &movables).iter() {
-                                points = Some(super::drawable::bresenham(line.start, line.end));
+                                points = Some(::util::bresenham(line.start, line.end));
                                 arg.delete(entity);
                             }
                             for (entity, _) in (&entities, &focused).iter() {
