@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use specs::{self, Join};
 
-use ::components::{ai, map, player, position};
+use ::components::{ai, combat, health, map, player, position};
 use ::components::input::OffsetMovable;
 use ::util;
 
@@ -33,11 +33,15 @@ impl specs::System<()> for AiSystem {
             return;
         }
 
-        let (mut map, mut chase_behaviors, dead, players, mut positions) = arg.fetch(|world| {
+        let (mut map, entities, mut chase_behaviors, mut attacked, dead, healths, equipped, players, mut positions) = arg.fetch(|world| {
             (
                 world.write_resource::<map::Map>(),
+                world.entities(),
                 world.write::<ai::ChaseBehavior>(),
+                world.write::<combat::Attack>(),
                 world.read::<ai::Dead>(),
+                world.read::<health::Health>(),
+                world.read::<player::Equip>(),
                 world.read::<player::Player>(),
                 world.write::<position::Position>(),
             )
@@ -48,12 +52,39 @@ impl specs::System<()> for AiSystem {
             player_position = (position.x, position.y);
         }
 
-        for (chaser, position, _) in (&mut chase_behaviors, &mut positions, !&dead).iter() {
+        for (me, chaser, position, equip, _) in (&entities, &mut chase_behaviors, &mut positions, &equipped, !&dead).iter() {
             if util::distance2(player_position, (position.x, position.y)) < 25 {
                 chaser.spotted = Some(player_position);
             }
 
             if let Some((x, y)) = chaser.spotted {
+
+                if util::distance2((x, y), (position.x, position.y)) < 9 {
+                    if let Some(_) = map.contents(x, y) {
+                        match ::util::combat::resolve(&map, me, &equip, *position, position::Position::new(player_position.0, player_position.1), |entity| {
+                            healths.get(entity).is_some()
+                        }) {
+                            ::util::combat::CombatResult::NothingEquipped => {
+                                // self.message_queue.send("You have nothing equipped!".into()).unwrap();
+                            }
+                            ::util::combat::CombatResult::Miss => {
+                                // self.message_queue.send("You missed!".into()).unwrap();
+                            }
+                            ::util::combat::CombatResult::HitNothing => {
+                                // self.message_queue.send("You hit nothing.".into()).unwrap();
+                            }
+                            ::util::combat::CombatResult::HitEnvironment => {
+                                // self.message_queue.send("You hit a wall.".into()).unwrap();
+                            }
+                            ::util::combat::CombatResult::HitEntity(target, pos, attack) => {
+                                // self.message_queue.send(format!("Targeted {}, {}", pos.x, pos.y)).unwrap();
+                                attacked.insert(target, attack);
+                            }
+                        }
+                        continue;
+                    }
+                }
+
                 let dx = (x as i32 - position.x as i32).signum();
                 let dy = (y as i32 - position.y as i32).signum();
 
