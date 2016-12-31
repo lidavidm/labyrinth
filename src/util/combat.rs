@@ -42,6 +42,9 @@ pub fn resolve<F>(map: &Map, attacker: Entity, equip: &Equip,
 
     if let Some(attack) = attack {
         for target in points.iter().skip(1) {
+            if *target == origin {
+                continue;
+            }
             if let Some(entity) = map.contents(target.x, target.y) {
                 if targetable(entity) {
                     return CombatResult::HitEntity(entity, *target, attack);
