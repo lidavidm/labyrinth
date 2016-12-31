@@ -272,7 +272,7 @@ impl specs::System<()> for BuilderSystem {
                 equip.left_hand = Some(super::player::Item {
                     name: "Xinhai Pistol".into(),
                     kind: super::player::ItemKind::Weapon {
-                        damage: (1, 3),
+                        damage: (1, 4),
                         accuracy: 700,
                     },
                 });
@@ -308,9 +308,18 @@ impl specs::System<()> for BuilderSystem {
                                 continue;
                             }
 
+                            let mut equip = super::player::Equip::new();
+                            equip.left_hand = Some(super::player::Item {
+                                name: "Subduction Pistol".into(),
+                                kind: super::player::ItemKind::Weapon {
+                                    damage: (1, 2),
+                                    accuracy: 600,
+                                },
+                            });
+
                             let entity = world.create_later_build()
                                 .with(super::ai::ChaseBehavior::new())
-                                .with(super::player::Equip::new())
+                                .with(equip)
                                 .with(super::position::Position::new(x, y))
                                 .with(super::drawable::StaticDrawable {
                                     tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
