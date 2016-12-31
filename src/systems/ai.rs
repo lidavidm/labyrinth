@@ -6,6 +6,7 @@ use ::components::input::OffsetMovable;
 use ::util;
 
 pub struct AiSystem {
+    message_queue: mpsc::Sender<String>,
     ai_begin: mpsc::Receiver<()>,
     ai_end: mpsc::Sender<()>,
 }
@@ -14,8 +15,9 @@ pub struct DeadSystem {
 }
 
 impl AiSystem {
-    pub fn new(ai_begin: mpsc::Receiver<()>, ai_end: mpsc::Sender<()>) -> AiSystem {
+    pub fn new(message_queue: mpsc::Sender<String>, ai_begin: mpsc::Receiver<()>, ai_end: mpsc::Sender<()>) -> AiSystem {
         AiSystem {
+            message_queue: message_queue,
             ai_begin: ai_begin,
             ai_end: ai_end,
         }
@@ -65,19 +67,18 @@ impl specs::System<()> for AiSystem {
                             healths.get(entity).is_some()
                         }) {
                             ::util::combat::CombatResult::NothingEquipped => {
-                                // self.message_queue.send("You have nothing equipped!".into()).unwrap();
                             }
                             ::util::combat::CombatResult::Miss => {
-                                // self.message_queue.send("You missed!".into()).unwrap();
+                                self.message_queue.send("Enemy missed!".into()).unwrap();
                             }
                             ::util::combat::CombatResult::HitNothing => {
-                                // self.message_queue.send("You hit nothing.".into()).unwrap();
+                                self.message_queue.send("Enemy hit nothing.".into()).unwrap();
                             }
                             ::util::combat::CombatResult::HitEnvironment => {
-                                // self.message_queue.send("You hit a wall.".into()).unwrap();
+                                self.message_queue.send("Enemy hit a wall.".into()).unwrap();
                             }
                             ::util::combat::CombatResult::HitEntity(target, pos, attack) => {
-                                // self.message_queue.send(format!("Targeted {}, {}", pos.x, pos.y)).unwrap();
+                                self.message_queue.send(format!("Enemy targeted {}, {}", pos.x, pos.y)).unwrap();
                                 attacked.insert(target, attack);
                             }
                         }
