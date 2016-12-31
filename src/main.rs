@@ -80,6 +80,7 @@ fn run() -> f64 {
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(msg_resource.clone()), "map_build", 20);
     planner.add_system(systems::ai::AiSystem::new(ab_rx, ae_tx), "ai", 1);
+    planner.add_system(systems::ai::DeadSystem::new(), "dead", 1);
     planner.add_system(systems::combat::CombatSystem::new(msg_resource.clone()), "combat", 100);
     planner.add_system(systems::ui::InfoPanelSystem::new(), "info_panel", 1);
 

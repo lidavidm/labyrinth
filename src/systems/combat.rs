@@ -19,15 +19,16 @@ impl CombatSystem {
 
 impl specs::System<()> for CombatSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
-        let (entities, mut map, players, mut chasers, mut attacked, mut healths, mut positions) = arg.fetch(|world| {
+        let (entities, mut map, players, mut chasers, mut dead, mut attacked, mut healths, positions) = arg.fetch(|world| {
             (
                 world.entities(),
                 world.write_resource::<map::Map>(),
                 world.read::<player::Player>(),
                 world.write::<ai::ChaseBehavior>(),
+                world.write::<ai::Dead>(),
                 world.write::<combat::Attack>(),
                 world.write::<health::Health>(),
-                world.write::<position::Position>(),
+                world.read::<position::Position>(),
             )
         });
 
@@ -37,7 +38,6 @@ impl specs::System<()> for CombatSystem {
             let damage = rand::thread_rng().gen_range(attack.damage.0, attack.damage.1);
             if damage >= health.health {
                 self.message_queue.send(format!("Hit for {} damage, killed!", damage)).unwrap();
-                map.vacate(position.x, position.y);
                 to_kill.push(entity);
             }
             else {
@@ -60,12 +60,7 @@ impl specs::System<()> for CombatSystem {
         }
 
         for entity in to_kill {
-            // Remove the position component immediately, then let
-            // specs handle fully deleting it later. Otherwise systems
-            // will still try and process the entity.
-            // TODO: some sort of Alive or Dead marker component?
-            positions.remove(entity);
-            arg.delete(entity);
+            dead.insert(entity, ai::Dead);
         }
     }
 }

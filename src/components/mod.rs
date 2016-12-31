@@ -13,6 +13,7 @@ pub mod ui;
 
 pub fn register_all(world: &mut World) {
     world.register::<ai::ChaseBehavior>();
+    world.register::<ai::Dead>();
 
     world.register::<camera::Camera>();
 
