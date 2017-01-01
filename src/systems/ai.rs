@@ -12,6 +12,7 @@ pub struct AiSystem {
 }
 
 pub struct DeadSystem {
+    player_dead: mpsc::Sender<()>,
 }
 
 impl AiSystem {
@@ -111,18 +112,22 @@ impl specs::System<()> for AiSystem {
 }
 
 impl DeadSystem {
-    pub fn new() -> DeadSystem {
-        DeadSystem {}
+    pub fn new() -> (DeadSystem, mpsc::Receiver<()>) {
+        let (player_dead, on_player_dead) = mpsc::channel();
+        (DeadSystem {
+            player_dead: player_dead,
+        }, on_player_dead)
     }
 }
 
 impl specs::System<()> for DeadSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
-        let (mut map, entities, dead, positions) = arg.fetch(|world| {
+        let (mut map, entities, dead, players, positions) = arg.fetch(|world| {
             (
                 world.write_resource::<map::Map>(),
                 world.entities(),
                 world.read::<ai::Dead>(),
+                world.read::<player::Player>(),
                 world.read::<position::Position>(),
             )
         });
@@ -131,6 +136,10 @@ impl specs::System<()> for DeadSystem {
             arg.delete(entity);
             map.vacate(position.x, position.y);
             // TODO: drop a corpse or something
+
+            if let Some(_) = players.get(entity) {
+                self.player_dead.send(()).unwrap();
+            }
         }
     }
 }

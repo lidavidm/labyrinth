@@ -80,7 +80,8 @@ fn run() -> f64 {
     planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
     planner.add_system(components::map::BuilderSystem::new(msg_resource.clone()), "map_build", 20);
     planner.add_system(systems::ai::AiSystem::new(msg_resource.clone(), ab_rx, ae_tx), "ai", 1);
-    planner.add_system(systems::ai::DeadSystem::new(), "dead", 1);
+    let (dead_system, on_player_dead) = systems::ai::DeadSystem::new();
+    planner.add_system(dead_system, "dead", 1);
     planner.add_system(systems::combat::CombatSystem::new(msg_resource.clone()), "combat", 100);
     planner.add_system(systems::ui::InfoPanelSystem::new(), "info_panel", 1);
 
@@ -115,7 +116,11 @@ fn run() -> f64 {
             else if let Ok(termion::event::Event::Key(k)) = event {
                 key_event_channel.send(k).unwrap();
             }
-            // TODO: dispatch key events to appropriate systems
+        }
+
+        if let Ok(()) = on_player_dead.try_recv() {
+            // TODO: show 'game over'
+            break 'main;
         }
 
         let now = time::precise_time_ns();

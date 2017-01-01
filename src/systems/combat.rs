@@ -19,10 +19,9 @@ impl CombatSystem {
 
 impl specs::System<()> for CombatSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
-        let (entities, mut map, players, mut chasers, mut dead, mut attacked, mut healths, positions) = arg.fetch(|world| {
+        let (entities, players, mut chasers, mut dead, mut attacked, mut healths, positions) = arg.fetch(|world| {
             (
                 world.entities(),
-                world.write_resource::<map::Map>(),
                 world.read::<player::Player>(),
                 world.write::<ai::ChaseBehavior>(),
                 world.write::<ai::Dead>(),
@@ -34,7 +33,7 @@ impl specs::System<()> for CombatSystem {
 
         let mut to_delete = vec![];
         let mut to_kill = vec![];
-        for (entity, attack, health, position) in (&entities, &mut attacked, &mut healths, &positions).iter() {
+        for (entity, attack, health) in (&entities, &mut attacked, &mut healths).iter() {
             let damage = rand::thread_rng().gen_range(attack.damage.0, attack.damage.1);
             if damage >= health.health {
                 self.message_queue.send(format!("Hit for {} damage, killed!", damage)).unwrap();
