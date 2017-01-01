@@ -45,8 +45,6 @@ fn run() -> f64 {
     use voodoo::color::ColorValue;
     use voodoo::terminal::{Mode, Terminal};
 
-    use screen::Screen;
-
     let mut world = specs::World::new();
     components::register_all(&mut world);
     let mut planner = specs::Planner::<()>::new(world, 2);
@@ -65,7 +63,7 @@ fn run() -> f64 {
     let mut avg_frame_time = 0.0;
     let mut frames: u64 = 0;
 
-    let mut screen = screen::GameScreen::setup(&mut planner);
+    let mut state = screen::StateManager::new(&mut planner, screen::StateTransition::Game);
 
     'main: loop {
         for event in rx.try_iter() {
@@ -73,7 +71,7 @@ fn run() -> f64 {
                 break 'main;
             }
             else if let Ok(termion::event::Event::Key(k)) = event {
-                screen.dispatch(k);
+                state.dispatch(k);
             }
         }
 
@@ -87,9 +85,9 @@ fn run() -> f64 {
             planner.dispatch(());
         }
 
-        screen.render(&mut planner, &mut compositor);
-
+        state.render(&mut planner, &mut compositor);
         compositor.display(&mut stdout);
+        state.update(&mut planner);
         thread::sleep(Duration::from_millis((TICK_TIME - dt) / MS));
 
         let frame_time = time::precise_time_ns() - old_tick;

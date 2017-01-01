@@ -12,7 +12,7 @@ pub struct AiSystem {
 }
 
 pub struct DeadSystem {
-    player_dead: mpsc::Sender<()>,
+    transitions: ::screen::TransitionChannel,
 }
 
 impl AiSystem {
@@ -112,11 +112,10 @@ impl specs::System<()> for AiSystem {
 }
 
 impl DeadSystem {
-    pub fn new() -> (DeadSystem, mpsc::Receiver<()>) {
-        let (player_dead, on_player_dead) = mpsc::channel();
-        (DeadSystem {
-            player_dead: player_dead,
-        }, on_player_dead)
+    pub fn new(transitions: ::screen::TransitionChannel) -> DeadSystem {
+        DeadSystem {
+            transitions: transitions,
+        }
     }
 }
 
@@ -138,7 +137,7 @@ impl specs::System<()> for DeadSystem {
             // TODO: drop a corpse or something
 
             if let Some(_) = players.get(entity) {
-                self.player_dead.send(()).unwrap();
+                // self.transitions.send(::screen::StateTransition::GameOver).unwrap();
             }
         }
     }
