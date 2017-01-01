@@ -137,7 +137,7 @@ impl specs::System<()> for DeadSystem {
             // TODO: drop a corpse or something
 
             if let Some(_) = players.get(entity) {
-                // self.transitions.send(::screen::StateTransition::GameOver).unwrap();
+                self.transitions.send(::screen::StateTransition::GameOver).unwrap();
             }
         }
     }
