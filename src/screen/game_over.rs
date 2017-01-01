@@ -7,16 +7,19 @@ use ::{WIDTH, HEIGHT};
 
 pub struct GameOverScreen {
     window: Window,
+    transitions: super::TransitionChannel,
 }
 
 impl ::screen::Screen for GameOverScreen {
     fn setup(planner: &mut specs::Planner<()>, transitions: super::TransitionChannel) -> GameOverScreen {
         GameOverScreen {
             window: Window::new(Point::new(0, 0), WIDTH, HEIGHT),
+            transitions: transitions,
         }
     }
 
-    fn dispatch(&mut self, event: termion::event::Key) {
+    fn dispatch(&mut self, _: termion::event::Key) {
+        self.transitions.send(super::StateTransition::Quit).unwrap();
     }
 
     fn render(&mut self, planner: &mut specs::Planner<()>, compositor: &mut Compositor) {

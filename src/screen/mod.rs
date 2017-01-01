@@ -28,9 +28,11 @@ pub enum State {
     GameOver(GameOverScreen),
 }
 
+#[derive(Clone,Copy,Debug,Eq,PartialEq)]
 pub enum StateTransition {
     Game,
     GameOver,
+    Quit,
 }
 
 impl StateTransition {
@@ -40,6 +42,7 @@ impl StateTransition {
         match *self {
             Game => State::Game(GameScreen::setup(planner, transitions)),
             GameOver => State::GameOver(GameOverScreen::setup(planner, transitions)),
+            Quit => panic!("Shouldn't construct this state"),
         }
     }
 }
@@ -58,11 +61,15 @@ impl StateManager {
         }
     }
 
-    pub fn update(&mut self, planner: &mut specs::Planner<()>) {
+    pub fn update(&mut self, planner: &mut specs::Planner<()>) -> bool {
         if let Some(transition) = self.transitions.1.try_iter().last() {
             self.teardown(planner);
+            if transition == StateTransition::Quit {
+                return true;
+            }
             self.state = transition.make(planner, self.transitions.0.clone());
         }
+        false
     }
 
     pub fn dispatch(&mut self, event: termion::event::Key) {

@@ -46,7 +46,7 @@ impl super::Screen for GameScreen {
         let (ab_tx, ab_rx) = mpsc::channel();
         let (ae_tx, ae_rx) = mpsc::channel();
 
-        let (input_system, key_event_channel) = components::input::InputSystem::new(msg_resource.clone(), ab_tx, ae_rx);
+        let (input_system, key_event_channel) = components::input::InputSystem::new(transitions.clone(), msg_resource.clone(), ab_tx, ae_rx);
         planner.add_system(input_system, "input", 100);
         planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
         planner.add_system(components::map::RenderSystem::new(), "map_render", 10);

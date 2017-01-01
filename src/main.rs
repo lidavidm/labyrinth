@@ -28,10 +28,6 @@ fn async_events<R: std::io::Read + Send + 'static>(stdin: R) -> mpsc::Receiver<s
 
     thread::spawn(move || {
         for event in stdin.events() {
-            if let Ok(termion::event::Event::Key(termion::event::Key::Esc)) = event {
-                tx.send(event).expect("Couldn't transmit event!");
-                break;
-            }
             tx.send(event).expect("Couldn't transmit event!");
         }
     });
@@ -67,10 +63,7 @@ fn run() -> f64 {
 
     'main: loop {
         for event in rx.try_iter() {
-            if let Ok(termion::event::Event::Key(termion::event::Key::Esc)) = event {
-                break 'main;
-            }
-            else if let Ok(termion::event::Event::Key(k)) = event {
+            if let Ok(termion::event::Event::Key(k)) = event {
                 state.dispatch(k);
             }
         }
@@ -87,7 +80,9 @@ fn run() -> f64 {
 
         state.render(&mut planner, &mut compositor);
         compositor.display(&mut stdout);
-        state.update(&mut planner);
+        if state.update(&mut planner) {
+            break 'main;
+        }
         thread::sleep(Duration::from_millis((TICK_TIME - dt) / MS));
 
         let frame_time = time::precise_time_ns() - old_tick;

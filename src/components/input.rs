@@ -26,6 +26,7 @@ pub struct InputSystem {
     ai_end: mpsc::Receiver<()>,
     ai_turn: bool,
     state: State,
+    transitions: ::screen::TransitionChannel,
 }
 
 #[derive(Clone,Copy)]
@@ -35,7 +36,7 @@ enum State {
 }
 
 impl InputSystem {
-    pub fn new(message_queue: mpsc::Sender<String>, ai_begin: mpsc::Sender<()>, ai_end: mpsc::Receiver<()>) -> (InputSystem, mpsc::Sender<Key>) {
+    pub fn new(transitions: ::screen::TransitionChannel, message_queue: mpsc::Sender<String>, ai_begin: mpsc::Sender<()>, ai_end: mpsc::Receiver<()>) -> (InputSystem, mpsc::Sender<Key>) {
         let (tx, rx) = mpsc::channel();
         (InputSystem {
             inputs: rx,
@@ -44,6 +45,7 @@ impl InputSystem {
             ai_end: ai_end,
             ai_turn: false,
             state: State::Toplevel,
+            transitions: transitions,
         }, tx)
     }
 
@@ -97,7 +99,7 @@ impl InputSystem {
 
             Targeting => {
                 window.clear();
-                window.print_at(Point::new(0, 0), "    q—Cancel");
+                window.print_at(Point::new(0, 0), "  Esc—Cancel");
                 window.print_at(Point::new(0, 1), " WASD—Manual Aim");
                 window.print_at(Point::new(0, 2), "  Tab—Cycle Target");
                 window.print_at(Point::new(0, 3), "Space—Confirm Fire");
@@ -137,6 +139,7 @@ impl specs::System<()> for InputSystem {
                 });
                 for key in self.inputs.try_iter() {
                     match key {
+                        Key::Esc => self.transitions.send(::screen::StateTransition::Quit).unwrap(),
                         Key::Up | Key::Down | Key::Left | Key::Right => {
                             let dir = match key {
                                 Key::Up => Direction::Up,
@@ -235,7 +238,7 @@ impl specs::System<()> for InputSystem {
                             self.process_movement(dir, &mut map, (&movables, &mut lines).iter());
                         }
 
-                        Key::Char('3') | Key::Char('q') | Key::Char(' ') => {
+                        Key::Esc | Key::Char('3') | Key::Char('q') | Key::Char(' ') => {
                             let mut points = None;
                             let mut attacker = None;
                             for (entity, line, _) in (&entities, &lines, &movables).iter() {
