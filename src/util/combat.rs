@@ -1,7 +1,8 @@
 use rand::{self, Rng};
-use specs::Entity;
+use specs::{self, Entity};
 
 use ::components::combat::Attack;
+use ::components::health::Health;
 use ::components::map::Map;
 use ::components::player::{Equip, Item, ItemKind};
 use ::components::position::Position;
@@ -14,9 +15,12 @@ pub enum CombatResult {
     HitEntity(Entity, Position, Attack),
 }
 
-pub fn resolve<F>(map: &Map, attacker: Entity, equip: &Equip,
-                  origin: Position, target: Position, targetable: F) -> CombatResult
-    where F: Fn(Entity) -> bool {
+type S<C> = specs::Storage<C, ::std::ops::Deref<Target=specs::Allocator>, ::std::ops::Deref<Target=specs::MaskedStorage<C>>>;
+
+pub fn resolve<A, D>(map: &Map, attacker: Entity, equip: &Equip,
+                  origin: Position, target: Position, targetable: &specs::Storage<Health, A, D>) -> CombatResult
+    where A: ::std::ops::Deref<Target=specs::Allocator>,
+          D: ::std::ops::Deref<Target=specs::MaskedStorage<Health>>, {
     let points = ::util::bresenham(origin, target);
 
     let attack = if let Some(Item {
@@ -48,7 +52,7 @@ pub fn resolve<F>(map: &Map, attacker: Entity, equip: &Equip,
                 continue;
             }
             if let Some(entity) = map.contents(target.x, target.y) {
-                if targetable(entity) {
+                if let Some(_) = targetable.get(entity) {
                     return CombatResult::HitEntity(entity, *target, attack);
                 }
             }

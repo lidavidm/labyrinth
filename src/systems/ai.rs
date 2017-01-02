@@ -64,9 +64,9 @@ impl specs::System<()> for AiSystem {
 
                 if util::distance2((x, y), (position.x, position.y)) < 9 {
                     if let Some(_) = map.contents(x, y) {
-                        match ::util::combat::resolve(&map, me, &equip, *position, position::Position::new(player_position.0, player_position.1), |entity| {
-                            healths.get(entity).is_some()
-                        }) {
+                        match ::util::combat::resolve(
+                            &map, me, &equip, *position,
+                            position::Position::new(player_position.0, player_position.1), &healths) {
                             ::util::combat::CombatResult::NothingEquipped => {
                             }
                             ::util::combat::CombatResult::Miss => {

@@ -256,9 +256,7 @@ impl specs::System<()> for InputSystem {
                                 self.ai_turn = true;
 
                                 if let (Some((start, end)), Some((attacker, equip))) = (points, attacker) {
-                                    match ::util::combat::resolve(&map, attacker, &equip, start, end, |entity| {
-                                        healths.get(entity).is_some()
-                                    }) {
+                                    match ::util::combat::resolve(&map, attacker, &equip, start, end, &healths) {
                                         ::util::combat::CombatResult::NothingEquipped => {
                                             self.message_queue.send("You have nothing equipped!".into()).unwrap();
                                         }
