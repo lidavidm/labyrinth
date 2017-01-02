@@ -248,6 +248,14 @@ impl specs::System<()> for InputSystem {
                             self.process_movement(Direction::Right, &mut map,
                                                   (&movables, &mut lines).iter()),
 
+                        Event::MouseHover(point) => {
+                            let camera = cameras.iter().next().unwrap();
+                            for (_, movable) in (&movables, &mut lines).iter() {
+                                movable.end.x = (camera.position.x + point.x) as usize;
+                                movable.end.y = (camera.position.y + point.y) as usize;
+                            }
+                        }
+
                         Event::Key(Key::Esc) | Event::Key(Key::Char('3')) |
                         Event::Key(Key::Char('q')) | Event::Key(Key::Char(' ')) => {
                             let mut points = None;

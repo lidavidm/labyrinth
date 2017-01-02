@@ -342,7 +342,7 @@ impl specs::System<()> for BuilderSystem {
                             let entity = world.create_later_build()
                                 .with(super::position::Position::new(x, y))
                                 .with(super::drawable::StaticDrawable {
-                                    tc: Into::<TermCell>::into('█').faint(),
+                                    tc: Into::<TermCell>::into('▒').faint(),
                                 })
                                 .with(super::health::Health::new(1, 1, 100.0, 100.0))
                                 .with(super::health::Cover::new(-200))
