@@ -85,6 +85,9 @@ pub fn resolve<H, C>(map: &Map, attacker: Entity, equip: &Equip,
                 if targetable.check(entity) && rand::thread_rng().gen_range(0, 1000) < attack.accuracy as i32 + accuracy_penalty {
                     return CombatResult::HitEntity(entity, *target, attack);
                 }
+                else if index == last {
+                    return CombatResult::Miss;
+                }
             }
             if !map.occupable(target.x, target.y) {
                 return CombatResult::HitEnvironment;
