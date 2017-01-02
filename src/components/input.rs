@@ -197,7 +197,7 @@ impl specs::System<()> for InputSystem {
                 let (
                     mut res, mut map, entities,
                     mut cameras, focused, mut movables,
-                    mut lines, healths,
+                    mut lines, covers, healths,
                     mut attacked, equipped,
                 ) = arg.fetch(|world| {
                     (
@@ -208,7 +208,8 @@ impl specs::System<()> for InputSystem {
                         world.read::<super::ui::Focus>(),
                         world.write::<Movable>(),
                         world.write::<super::drawable::LineDrawable>(),
-                        world.write::<super::health::Health>(),
+                        world.read::<super::health::Cover>(),
+                        world.read::<super::health::Health>(),
                         world.write::<super::combat::Attack>(),
                         world.read::<super::player::Equip>(),
                     )
@@ -256,7 +257,7 @@ impl specs::System<()> for InputSystem {
                                 self.ai_turn = true;
 
                                 if let (Some((start, end)), Some((attacker, equip))) = (points, attacker) {
-                                    match ::util::combat::resolve(&map, attacker, &equip, start, end, &healths) {
+                                    match ::util::combat::resolve(&map, attacker, &equip, start, end, &healths, &covers) {
                                         ::util::combat::CombatResult::NothingEquipped => {
                                             self.message_queue.send("You have nothing equipped!".into()).unwrap();
                                         }

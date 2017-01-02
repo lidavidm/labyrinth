@@ -36,13 +36,14 @@ impl specs::System<()> for AiSystem {
             return;
         }
 
-        let (mut map, entities, mut chase_behaviors, mut attacked, dead, healths, equipped, players, mut positions) = arg.fetch(|world| {
+        let (mut map, entities, mut chase_behaviors, mut attacked, dead, covers, healths, equipped, players, mut positions) = arg.fetch(|world| {
             (
                 world.write_resource::<map::Map>(),
                 world.entities(),
                 world.write::<ai::ChaseBehavior>(),
                 world.write::<combat::Attack>(),
                 world.read::<ai::Dead>(),
+                world.read::<health::Cover>(),
                 world.read::<health::Health>(),
                 world.read::<player::Equip>(),
                 world.read::<player::Player>(),
@@ -66,7 +67,7 @@ impl specs::System<()> for AiSystem {
                     if let Some(_) = map.contents(x, y) {
                         match ::util::combat::resolve(
                             &map, me, &equip, *position,
-                            position::Position::new(player_position.0, player_position.1), &healths) {
+                            position::Position::new(player_position.0, player_position.1), &healths, &covers) {
                             ::util::combat::CombatResult::NothingEquipped => {
                             }
                             ::util::combat::CombatResult::Miss => {

@@ -345,6 +345,7 @@ impl specs::System<()> for BuilderSystem {
                                     tc: Into::<TermCell>::into('█'),
                                 })
                                 .with(super::health::Health::new(1, 1, 100.0, 100.0))
+                                .with(super::health::Cover::new(-200))
                                 .build();
                             map.fill(entity, x, y);
                             break;

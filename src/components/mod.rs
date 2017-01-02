@@ -23,6 +23,7 @@ pub fn register_all(world: &mut World) {
     world.register::<drawable::StaticDrawable>();
     world.register::<drawable::DrawableRender>();
 
+    world.register::<health::Cover>();
     world.register::<health::Health>();
 
     world.register::<input::Movable>();
