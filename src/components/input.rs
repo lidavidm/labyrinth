@@ -1,7 +1,8 @@
+use std::cell::Cell;
 use std::sync::mpsc;
 
 use specs;
-use termion::event::Key;
+use termion::event::{Key, MouseEvent};
 use voodoo::window::{Point, Window};
 
 use ::systems::ui;
@@ -20,13 +21,21 @@ pub trait OffsetMovable {
 }
 
 pub struct InputSystem {
-    pub inputs: mpsc::Receiver<Key>,
+    pub inputs: mpsc::Receiver<Event>,
     message_queue: mpsc::Sender<String>,
     ai_begin: mpsc::Sender<()>,
     ai_end: mpsc::Receiver<()>,
-    ai_turn: bool,
+    ai_turn: Cell<bool>,
     state: State,
     transitions: ::screen::TransitionChannel,
+}
+
+#[derive(Clone,Copy,Debug,Eq,PartialEq)]
+pub enum Event {
+    Key(Key),
+    MouseDown(Point),
+    MouseHover(Point),
+    MouseRelease(Point),
 }
 
 #[derive(Clone,Copy)]
@@ -36,14 +45,14 @@ enum State {
 }
 
 impl InputSystem {
-    pub fn new(transitions: ::screen::TransitionChannel, message_queue: mpsc::Sender<String>, ai_begin: mpsc::Sender<()>, ai_end: mpsc::Receiver<()>) -> (InputSystem, mpsc::Sender<Key>) {
+    pub fn new(transitions: ::screen::TransitionChannel, message_queue: mpsc::Sender<String>, ai_begin: mpsc::Sender<()>, ai_end: mpsc::Receiver<()>) -> (InputSystem, mpsc::Sender<Event>) {
         let (tx, rx) = mpsc::channel();
         (InputSystem {
             inputs: rx,
             message_queue: message_queue,
             ai_begin: ai_begin,
             ai_end: ai_end,
-            ai_turn: false,
+            ai_turn: Cell::new(false),
             state: State::Toplevel,
             transitions: transitions,
         }, tx)
@@ -66,18 +75,19 @@ impl InputSystem {
         }
     }
 
-    fn process_movement<'a, OM, I>(&self, direction: Direction, map: &mut Map, movables: I) -> bool
+    fn process_movement<'a, OM, I>(&self, direction: Direction, map: &mut Map, movables: I)
         where OM: 'a + OffsetMovable,
               I: Iterator<Item=(&'a Movable, &'a mut OM)> {
-        let mut moved = false;
         let offset = direction.offset();
 
         for (_, movable) in movables {
             let _ = movable.move_by(offset, map);
-            moved = true;
         }
+    }
 
-        moved
+    fn end_turn(&self) {
+        self.ai_begin.send(()).unwrap();
+        self.ai_turn.set(false);
     }
 
     fn render(&self, window: &mut Window) {
@@ -91,10 +101,13 @@ impl InputSystem {
                 window.print_at(Point::new(0, 2), "   2—Interact");
                 window.print_at(Point::new(0, 3), "   3—Fire");
 
-                window.print_at(Point::new(14, 0), "I—Inventory");
-                window.print_at(Point::new(14, 1), "B—Build");
-                window.print_at(Point::new(14, 2), "T—Rest");
-                window.print_at(Point::new(14, 3), "F—Journal");
+                window.print_at(Point::new(14, 0), "4—Melee");
+                window.print_at(Point::new(14, 1), "5—Item");
+
+                window.print_at(Point::new(22, 0), "I—Inventory");
+                window.print_at(Point::new(22, 1), "B—Build");
+                window.print_at(Point::new(22, 2), "T—Rest");
+                window.print_at(Point::new(22, 3), "F—Journal");
             }
 
             Targeting => {
@@ -113,9 +126,9 @@ impl specs::System<()> for InputSystem {
         use specs::Join;
         use self::State::*;
 
-        if self.ai_turn {
+        if self.ai_turn.get() {
             if let Ok(()) = self.ai_end.try_recv() {
-                self.ai_turn = false;
+                self.ai_turn.set(false);
             }
             else {
                 // Required to make specs not panic
@@ -137,37 +150,37 @@ impl specs::System<()> for InputSystem {
                         world.write::<super::drawable::LineDrawable>(),
                     )
                 });
-                for key in self.inputs.try_iter() {
-                    match key {
-                        Key::Esc => self.transitions.send(::screen::StateTransition::Quit).unwrap(),
-                        Key::Up | Key::Down | Key::Left | Key::Right => {
-                            let dir = match key {
-                                Key::Up => Direction::Up,
-                                Key::Down => Direction::Down,
-                                Key::Left => Direction::Left,
-                                Key::Right => Direction::Right,
-                                _ => unreachable!(),
-                            };
-                            self.process_panning(dir, (&mut cameras).iter());
+                for event in self.inputs.try_iter() {
+                    match event {
+                        Event::Key(Key::Esc) => self.transitions.send(::screen::StateTransition::Quit).unwrap(),
+
+                        Event::Key(Key::Up) => self.process_panning(Direction::Up, (&mut cameras).iter()),
+                        Event::Key(Key::Down) => self.process_panning(Direction::Down, (&mut cameras).iter()),
+                        Event::Key(Key::Left) => self.process_panning(Direction::Left, (&mut cameras).iter()),
+                        Event::Key(Key::Right) => self.process_panning(Direction::Right, (&mut cameras).iter()),
+
+                        Event::Key(Key::Char('w')) => {
+                            self.process_movement(Direction::Up, &mut map,
+                                                  (&movables, &mut positions).iter());
+                            self.end_turn();
+                        }
+                        Event::Key(Key::Char('s')) => {
+                            self.process_movement(Direction::Down, &mut map,
+                                                  (&movables, &mut positions).iter());
+                            self.end_turn();
+                        }
+                        Event::Key(Key::Char('a')) => {
+                            self.process_movement(Direction::Left, &mut map,
+                                                  (&movables, &mut positions).iter());
+                            self.end_turn();
+                        }
+                        Event::Key(Key::Char('d')) => {
+                            self.process_movement(Direction::Right, &mut map,
+                                                  (&movables, &mut positions).iter());
+                            self.end_turn();
                         }
 
-                        Key::Char('w') | Key::Char('a') | Key::Char('s') | Key::Char('d') => {
-                            let dir = match key {
-                                Key::Char('w') => Direction::Up,
-                                Key::Char('s') => Direction::Down,
-                                Key::Char('a') => Direction::Left,
-                                Key::Char('d') => Direction::Right,
-                                _ => unreachable!(),
-                            };
-
-                            if self.process_movement(dir, &mut map, (&movables, &mut positions).iter()) {
-                                self.ai_begin.send(()).unwrap();
-                                self.ai_turn = true;
-                                break;
-                            }
-                        }
-
-                        Key::Char('3') => {
+                        Event::Key(Key::Char('3')) => {
                             movables.clear();
 
                             let mut start_pos = Position { x: 0, y: 0 };
@@ -215,31 +228,28 @@ impl specs::System<()> for InputSystem {
                     )
                 });
 
-                for key in self.inputs.try_iter() {
-                    match key {
-                        Key::Up | Key::Down | Key::Left | Key::Right => {
-                            let dir = match key {
-                                Key::Up => Direction::Up,
-                                Key::Down => Direction::Down,
-                                Key::Left => Direction::Left,
-                                Key::Right => Direction::Right,
-                                _ => unreachable!(),
-                            };
-                            self.process_panning(dir, (&mut cameras).iter());
-                        }
+                for event in self.inputs.try_iter() {
+                    match event {
+                        Event::Key(Key::Up) => self.process_panning(Direction::Up, (&mut cameras).iter()),
+                        Event::Key(Key::Down) => self.process_panning(Direction::Down, (&mut cameras).iter()),
+                        Event::Key(Key::Left) => self.process_panning(Direction::Left, (&mut cameras).iter()),
+                        Event::Key(Key::Right) => self.process_panning(Direction::Right, (&mut cameras).iter()),
 
-                        Key::Char('w') | Key::Char('a') | Key::Char('s') | Key::Char('d') => {
-                            let dir = match key {
-                                Key::Char('w') => Direction::Up,
-                                Key::Char('s') => Direction::Down,
-                                Key::Char('a') => Direction::Left,
-                                Key::Char('d') => Direction::Right,
-                                _ => unreachable!(),
-                            };
-                            self.process_movement(dir, &mut map, (&movables, &mut lines).iter());
-                        }
+                        Event::Key(Key::Char('w')) =>
+                            self.process_movement(Direction::Up, &mut map,
+                                                  (&movables, &mut lines).iter()),
+                        Event::Key(Key::Char('s')) =>
+                            self.process_movement(Direction::Down, &mut map,
+                                                  (&movables, &mut lines).iter()),
+                        Event::Key(Key::Char('a')) =>
+                            self.process_movement(Direction::Left, &mut map,
+                                                  (&movables, &mut lines).iter()),
+                        Event::Key(Key::Char('d')) =>
+                            self.process_movement(Direction::Right, &mut map,
+                                                  (&movables, &mut lines).iter()),
 
-                        Key::Esc | Key::Char('3') | Key::Char('q') | Key::Char(' ') => {
+                        Event::Key(Key::Esc) | Event::Key(Key::Char('3')) |
+                        Event::Key(Key::Char('q')) | Event::Key(Key::Char(' ')) => {
                             let mut points = None;
                             let mut attacker = None;
                             for (entity, line, _) in (&entities, &lines, &movables).iter() {
@@ -252,9 +262,8 @@ impl specs::System<()> for InputSystem {
                             }
                             self.state = Toplevel;
 
-                            if key == Key::Char(' ') {
-                                self.ai_begin.send(()).unwrap();
-                                self.ai_turn = true;
+                            if event == Event::Key(Key::Char(' ')) {
+                                self.end_turn();
 
                                 if let (Some((start, end)), Some((attacker, equip))) = (points, attacker) {
                                     match ::util::combat::resolve(&map, attacker, &equip, start, end, &healths, &covers) {

@@ -63,8 +63,8 @@ fn run() -> f64 {
 
     'main: loop {
         for event in rx.try_iter() {
-            if let Ok(termion::event::Event::Key(k)) = event {
-                state.dispatch(k);
+            if let Ok(event) = event {
+                state.dispatch(event);
             }
         }
 

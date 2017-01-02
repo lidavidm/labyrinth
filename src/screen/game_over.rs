@@ -18,7 +18,7 @@ impl ::screen::Screen for GameOverScreen {
         }
     }
 
-    fn dispatch(&mut self, _: termion::event::Key) {
+    fn dispatch(&mut self, _: termion::event::Event) {
         self.transitions.send(super::StateTransition::Quit).unwrap();
     }
 

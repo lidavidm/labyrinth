@@ -14,7 +14,7 @@ pub type TransitionChannel = mpsc::Sender<StateTransition>;
 pub trait Screen {
     fn setup(planner: &mut specs::Planner<()>, transitions: mpsc::Sender<StateTransition>) -> Self;
 
-    fn dispatch(&mut self, event: termion::event::Key);
+    fn dispatch(&mut self, event: termion::event::Event);
 
     fn render(&mut self, planner: &mut specs::Planner<()>, compositor: &mut Compositor);
 
@@ -72,7 +72,7 @@ impl StateManager {
         false
     }
 
-    pub fn dispatch(&mut self, event: termion::event::Key) {
+    pub fn dispatch(&mut self, event: termion::event::Event) {
         use self::State::*;
 
         match self.state {

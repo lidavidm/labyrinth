@@ -12,7 +12,7 @@ use ::{components, systems};
 pub struct GameScreen {
     map_frame: Window,
     msg_frame: Window,
-    key_event_channel: mpsc::Sender<termion::event::Key>,
+    event_channel: mpsc::Sender<components::input::Event>,
 }
 
 impl super::Screen for GameScreen {
@@ -46,7 +46,7 @@ impl super::Screen for GameScreen {
         let (ab_tx, ab_rx) = mpsc::channel();
         let (ae_tx, ae_rx) = mpsc::channel();
 
-        let (input_system, key_event_channel) = components::input::InputSystem::new(transitions.clone(), msg_resource.clone(), ab_tx, ae_rx);
+        let (input_system, event_channel) = components::input::InputSystem::new(transitions.clone(), msg_resource.clone(), ab_tx, ae_rx);
         planner.add_system(input_system, "input", 100);
         planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
         planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
@@ -68,12 +68,15 @@ impl super::Screen for GameScreen {
         GameScreen {
             map_frame: map_frame,
             msg_frame: msg_frame,
-            key_event_channel: key_event_channel,
+            event_channel: event_channel,
         }
     }
 
-    fn dispatch(&mut self, event: termion::event::Key) {
-        self.key_event_channel.send(event).unwrap();
+    fn dispatch(&mut self, event: termion::event::Event) {
+        self.event_channel.send(match event {
+            termion::event::Event::Key(k) => components::input::Event::Key(k),
+            _ => return,
+        }).unwrap();
     }
 
     fn render(&mut self, planner: &mut specs::Planner<()>, compositor: &mut Compositor) {
