@@ -291,7 +291,7 @@ impl specs::System<()> for BuilderSystem {
                     .build();
                 map.fill(entity, 50, 50);
 
-                for _ in 0..100 {
+                for _ in 0..50 {
                     for _ in 0..1000 {
                         let index = rand::thread_rng().gen_range(0, map.map.len());
                         if let MapCell::Floor = map.map[index] {
@@ -325,6 +325,26 @@ impl specs::System<()> for BuilderSystem {
                                     tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
                                 })
                                 .with(super::health::Health::new(3, 3, 100.0, 100.0))
+                                .build();
+                            map.fill(entity, x, y);
+                            break;
+                        }
+                    }
+                }
+
+                for _ in 0..150 {
+                    for _ in 0..1000 {
+                        let index = rand::thread_rng().gen_range(0, map.map.len());
+                        let y = index / map.width;
+                        let x = index % map.width;
+
+                        if map.passable(x, y) {
+                            let entity = world.create_later_build()
+                                .with(super::position::Position::new(x, y))
+                                .with(super::drawable::StaticDrawable {
+                                    tc: Into::<TermCell>::into('█'),
+                                })
+                                .with(super::health::Health::new(1, 1, 100.0, 100.0))
                                 .build();
                             map.fill(entity, x, y);
                             break;

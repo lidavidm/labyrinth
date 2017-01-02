@@ -25,6 +25,8 @@ pub fn resolve<F>(map: &Map, attacker: Entity, equip: &Equip,
         },
         ..
     }) = equip.left_hand {
+        // TODO: change this to calculate accuracy as we walk the
+        // line, so we can account for cover
         if rand::thread_rng().gen_range(0, 1000) < accuracy {
             Some(Attack {
                 damage: damage,
