@@ -81,13 +81,25 @@ impl specs::System<()> for MessagesPanelSystem {
             world.write_resource::<MessagesPanelResource>()
         });
 
+        let mut need_repaint = false;
         for message in self.incoming.try_iter() {
             if self.cursor.y < res.window.height - 1 {
                 res.window.print_at(self.cursor, &message);
                 self.cursor.x = 0;
                 self.cursor.y += 1;
             }
+            else {
+                need_repaint = true;
+            }
             self.messages.push(message);
+        }
+
+        if need_repaint {
+            res.window.clear();
+            let base = self.messages.len() - res.window.height as usize;
+            for y in 0..res.window.height {
+                res.window.print_at(Point::new(0, y), &self.messages[base + y as usize]);
+            }
         }
     }
 }
