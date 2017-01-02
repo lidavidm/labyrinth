@@ -14,9 +14,15 @@ pub struct Item {
     pub kind: ItemKind,
 }
 
+
 #[derive(Clone,Debug,Default,Eq,PartialEq)]
 pub struct Equip {
-    pub left_hand: Option<Item>,
+    pub primary: Option<Item>,
+    pub secondary: Option<Item>,
+    pub head: Option<Item>,
+    pub body: Option<Item>,
+    pub legs: Option<Item>,
+    pub feet: Option<Item>,
 }
 
 /// This entity is the player.
@@ -33,9 +39,7 @@ impl Player {
 
 impl Equip {
     pub fn new() -> Equip {
-        Equip {
-            left_hand: None,
-        }
+        Default::default()
     }
 }
 

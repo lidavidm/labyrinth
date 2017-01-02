@@ -1,7 +1,6 @@
 use std::sync::mpsc;
 
 use specs::{self, Join};
-use voodoo;
 use voodoo::color::ColorValue;
 use voodoo::window::{FormattedString, Point, Window};
 

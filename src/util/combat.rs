@@ -52,7 +52,7 @@ pub fn resolve<H, C>(map: &Map, attacker: Entity, equip: &Equip,
             damage, accuracy
         },
         ..
-    }) = equip.left_hand {
+    }) = equip.primary {
         Some(Attack {
             damage: damage,
             accuracy: accuracy,

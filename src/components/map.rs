@@ -269,7 +269,7 @@ impl specs::System<()> for BuilderSystem {
                 let mut map = world.write_resource::<Map>();
 
                 let mut equip = super::player::Equip::new();
-                equip.left_hand = Some(super::player::Item {
+                equip.primary = Some(super::player::Item {
                     name: "Xinhai Pistol".into(),
                     kind: super::player::ItemKind::Weapon {
                         damage: (1, 4),
@@ -309,7 +309,7 @@ impl specs::System<()> for BuilderSystem {
                             }
 
                             let mut equip = super::player::Equip::new();
-                            equip.left_hand = Some(super::player::Item {
+                            equip.primary = Some(super::player::Item {
                                 name: "Subduction Pistol".into(),
                                 kind: super::player::ItemKind::Weapon {
                                     damage: (1, 2),
@@ -342,7 +342,7 @@ impl specs::System<()> for BuilderSystem {
                             let entity = world.create_later_build()
                                 .with(super::position::Position::new(x, y))
                                 .with(super::drawable::StaticDrawable {
-                                    tc: Into::<TermCell>::into('█'),
+                                    tc: Into::<TermCell>::into('█').faint(),
                                 })
                                 .with(super::health::Health::new(1, 1, 100.0, 100.0))
                                 .with(super::health::Cover::new(-200))

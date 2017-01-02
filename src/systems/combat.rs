@@ -3,7 +3,7 @@ use std::sync::mpsc;
 use rand::{self, Rng};
 use specs::{self, Join};
 
-use ::components::{ai, combat, health, map, player, position};
+use ::components::{ai, combat, health, player, position};
 
 pub struct CombatSystem {
     message_queue: mpsc::Sender<String>,
