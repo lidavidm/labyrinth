@@ -103,7 +103,9 @@ impl specs::System<()> for RenderSystem {
                 for coord in points {
                     if let Some(point) = coord.relative_to(&camera) {
                         let mut tc: TermCell = ' '.into();
-                        tc.bg = Some(if map.occupable(coord.x, coord.y) {
+                        tc.bg = Some(if let Some(_) = map.contents(coord.x, coord.y) {
+                            ColorValue::Yellow
+                        } else if map.occupable(coord.x, coord.y) {
                             ColorValue::Magenta
                         } else {
                             ColorValue::Red
