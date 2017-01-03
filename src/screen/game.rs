@@ -80,7 +80,7 @@ impl super::Screen for GameScreen {
                 let x = x - 1;
                 let y = y - 1;
 
-                if x >= 1 && x < 1 + MAP_WIDTH && y >= y && y <= 1 + MAP_HEIGHT {
+                if x >= 1 && x < 1 + MAP_WIDTH && y >= 1 && y <= 1 + MAP_HEIGHT {
                     // Convert to relative to map
                     components::input::Event::MouseHover(Point::new(x - 1, y - 1))
                 }
