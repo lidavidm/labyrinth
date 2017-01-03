@@ -41,6 +41,7 @@ pub enum Event {
 #[derive(Clone,Copy)]
 enum State {
     Toplevel,
+    Examining,
     Targeting,
 }
 
@@ -92,10 +93,10 @@ impl InputSystem {
 
     fn render(&self, window: &mut Window) {
         use self::State::*;
+        window.clear();
 
         match self.state {
             Toplevel => {
-                window.clear();
                 window.print_at(Point::new(0, 0), "WASD—Move");
                 window.print_at(Point::new(0, 1), "   1—Examine");
                 window.print_at(Point::new(0, 2), "   2—Interact");
@@ -110,8 +111,13 @@ impl InputSystem {
                 window.print_at(Point::new(22, 3), "F—Journal");
             }
 
+            Examining => {
+                window.print_at(Point::new(0, 0), "  Esc—Cancel");
+                window.print_at(Point::new(0, 1), " WASD—Move");
+                window.print_at(Point::new(0, 2), "Mouse—Describe");
+            }
+
             Targeting => {
-                window.clear();
                 window.print_at(Point::new(0, 0), "  Esc—Cancel");
                 window.print_at(Point::new(0, 1), " WASD—Manual Aim");
                 window.print_at(Point::new(0, 2), "  Tab—Cycle Target");
@@ -180,6 +186,11 @@ impl specs::System<()> for InputSystem {
                             self.end_turn();
                         }
 
+                        Event::Key(Key::Char('1')) => {
+                            self.state = Examining;
+                            break;
+                        }
+
                         Event::Key(Key::Char('3')) => {
                             movables.clear();
 
@@ -197,6 +208,74 @@ impl specs::System<()> for InputSystem {
                             movables.insert(e, Movable);
                             self.state = Targeting;
                             break;
+                        }
+
+                        _ => {}
+                    }
+                }
+
+                self.render(&mut res.window);
+            }
+
+            Examining => {
+                let (mut res, mut map, mut cameras, movables, mut positions, cover, health) = arg.fetch(|world| {
+                    (
+                        world.write_resource::<ui::CommandPanelResource>(),
+                        world.write_resource::<super::map::Map>(),
+                        world.write::<super::camera::Camera>(),
+                        world.read::<Movable>(),
+                        world.write::<Position>(),
+                        world.read::<super::health::Cover>(),
+                        world.read::<super::health::Health>(),
+                    )
+                });
+                for event in self.inputs.try_iter() {
+                    match event {
+                        Event::Key(Key::Esc) => self.state = Toplevel,
+
+                        Event::Key(Key::Up) => self.process_panning(Direction::Up, (&mut cameras).iter()),
+                        Event::Key(Key::Down) => self.process_panning(Direction::Down, (&mut cameras).iter()),
+                        Event::Key(Key::Left) => self.process_panning(Direction::Left, (&mut cameras).iter()),
+                        Event::Key(Key::Right) => self.process_panning(Direction::Right, (&mut cameras).iter()),
+
+                        Event::Key(Key::Char('w')) => {
+                            self.process_movement(Direction::Up, &mut map,
+                                                  (&movables, &mut positions).iter());
+                            self.end_turn();
+                        }
+                        Event::Key(Key::Char('s')) => {
+                            self.process_movement(Direction::Down, &mut map,
+                                                  (&movables, &mut positions).iter());
+                            self.end_turn();
+                        }
+                        Event::Key(Key::Char('a')) => {
+                            self.process_movement(Direction::Left, &mut map,
+                                                  (&movables, &mut positions).iter());
+                            self.end_turn();
+                        }
+                        Event::Key(Key::Char('d')) => {
+                            self.process_movement(Direction::Right, &mut map,
+                                                  (&movables, &mut positions).iter());
+                            self.end_turn();
+                        }
+
+                        Event::MouseRelease(point) => {
+                            let camera = cameras.iter().next().unwrap();
+                            let x = (camera.position.x + point.x) as usize;
+                            let y = (camera.position.y + point.y) as usize;
+
+                            if let Some(entity) = map.contents(x, y) {
+                                self.message_queue.send(format!("Position: {}, {}", x, y)).unwrap();
+                                if let Some(h) = health.get(entity) {
+                                    self.message_queue.send(format!("Health: {}/{}", h.health, h.max_health)).unwrap();
+                                }
+                                if let Some(_) = cover.get(entity) {
+                                    self.message_queue.send("Provides cover".into()).unwrap();
+                                }
+                            }
+                            else {
+                                self.message_queue.send("Nothing here.".into()).unwrap();
+                            }
                         }
 
                         _ => {}
