@@ -231,12 +231,21 @@ impl specs::System<()> for RenderSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
         use specs::Join;
 
-        let (map, mut renderers, cameras) = arg.fetch(|world| {
-            let map = world.read_resource::<Map>();
-            let renderers = world.write::<MapRender>();
-            let cameras = world.read::<Camera>();
-            (map, renderers, cameras)
+        let (map, mut renderers, mut cameras, focused, positions) = arg.fetch(|world| {
+            (
+                world.read_resource::<Map>(),
+                world.write::<MapRender>(),
+                world.write::<Camera>(),
+                world.read::<super::ui::Focus>(),
+                world.read::<super::position::Position>(),
+            )
         });
+
+        for camera in (&mut cameras).iter() {
+            if let Some((_, focused)) = (&focused, &positions).iter().next() {
+                camera.center_on(focused.x as u16, focused.y as u16);
+            }
+        }
 
         for (renderer, camera) in (&mut renderers, &cameras).iter() {
             renderer.render(&map, &camera);

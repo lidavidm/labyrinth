@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::sync::mpsc;
 
 use specs;
-use termion::event::{Key, MouseEvent};
+use termion::event::Key;
 use voodoo::window::{Point, Window};
 
 use ::systems::ui;
@@ -57,23 +57,6 @@ impl InputSystem {
             state: State::Toplevel,
             transitions: transitions,
         }, tx)
-    }
-
-    fn process_panning<'a, I: Iterator<Item=&'a mut super::camera::Camera>>(&self, direction: Direction, cameras: I) {
-        let offset = direction.offset();
-        for camera in cameras {
-            let new_x = camera.position.x as i32 + offset.0;
-            let new_y = camera.position.y as i32 + offset.1;
-
-            let new_x = if new_x < 0 { 0 } else { new_x as u16 };
-            let new_y = if new_y < 0 { 0 } else { new_y as u16 };
-
-            let new_x = ::std::cmp::min(new_x, camera.max_x());
-            let new_y = ::std::cmp::min(new_y, camera.max_y());
-
-            camera.position.x = new_x;
-            camera.position.y = new_y;
-        }
     }
 
     fn process_movement<'a, OM, I>(&self, direction: Direction, map: &mut Map, movables: I)
@@ -160,11 +143,6 @@ impl specs::System<()> for InputSystem {
                     match event {
                         Event::Key(Key::Esc) => self.transitions.send(::screen::StateTransition::Quit).unwrap(),
 
-                        Event::Key(Key::Up) => self.process_panning(Direction::Up, (&mut cameras).iter()),
-                        Event::Key(Key::Down) => self.process_panning(Direction::Down, (&mut cameras).iter()),
-                        Event::Key(Key::Left) => self.process_panning(Direction::Left, (&mut cameras).iter()),
-                        Event::Key(Key::Right) => self.process_panning(Direction::Right, (&mut cameras).iter()),
-
                         Event::Key(Key::Char('w')) => {
                             self.process_movement(Direction::Up, &mut map,
                                                   (&movables, &mut positions).iter());
@@ -233,11 +211,6 @@ impl specs::System<()> for InputSystem {
                     match event {
                         Event::Key(Key::Esc) => self.state = Toplevel,
 
-                        Event::Key(Key::Up) => self.process_panning(Direction::Up, (&mut cameras).iter()),
-                        Event::Key(Key::Down) => self.process_panning(Direction::Down, (&mut cameras).iter()),
-                        Event::Key(Key::Left) => self.process_panning(Direction::Left, (&mut cameras).iter()),
-                        Event::Key(Key::Right) => self.process_panning(Direction::Right, (&mut cameras).iter()),
-
                         Event::Key(Key::Char('w')) => {
                             self.process_movement(Direction::Up, &mut map,
                                                   (&movables, &mut positions).iter());
@@ -288,7 +261,7 @@ impl specs::System<()> for InputSystem {
             Targeting => {
                 let (
                     mut res, mut map, entities,
-                    mut cameras, focused, mut movables,
+                    cameras, focused, mut movables,
                     mut lines, covers, healths,
                     mut attacked, equipped,
                 ) = arg.fetch(|world| {
@@ -296,7 +269,7 @@ impl specs::System<()> for InputSystem {
                         world.write_resource::<ui::CommandPanelResource>(),
                         world.write_resource::<super::map::Map>(),
                         world.entities(),
-                        world.write::<super::camera::Camera>(),
+                        world.read::<super::camera::Camera>(),
                         world.read::<super::ui::Focus>(),
                         world.write::<Movable>(),
                         world.write::<super::drawable::LineDrawable>(),
@@ -309,11 +282,6 @@ impl specs::System<()> for InputSystem {
 
                 for event in self.inputs.try_iter() {
                     match event {
-                        Event::Key(Key::Up) => self.process_panning(Direction::Up, (&mut cameras).iter()),
-                        Event::Key(Key::Down) => self.process_panning(Direction::Down, (&mut cameras).iter()),
-                        Event::Key(Key::Left) => self.process_panning(Direction::Left, (&mut cameras).iter()),
-                        Event::Key(Key::Right) => self.process_panning(Direction::Right, (&mut cameras).iter()),
-
                         Event::Key(Key::Char('w')) =>
                             self.process_movement(Direction::Up, &mut map,
                                                   (&movables, &mut lines).iter()),
@@ -327,7 +295,7 @@ impl specs::System<()> for InputSystem {
                             self.process_movement(Direction::Right, &mut map,
                                                   (&movables, &mut lines).iter()),
 
-                        Event::MouseHover(point) => {
+                        Event::MouseHover(point) | Event::MouseRelease(point) => {
                             let camera = cameras.iter().next().unwrap();
                             for (_, movable) in (&movables, &mut lines).iter() {
                                 movable.end.x = (camera.position.x + point.x) as usize;
