@@ -14,6 +14,8 @@ pub struct Item {
     pub kind: ItemKind,
 }
 
+#[derive(Clone,Debug,Eq,PartialEq)]
+pub struct Grabbable(Item);
 
 #[derive(Clone,Debug,Default,Eq,PartialEq)]
 pub struct Equip {
@@ -41,6 +43,10 @@ impl Equip {
     pub fn new() -> Equip {
         Default::default()
     }
+}
+
+impl specs::Component for Grabbable {
+    type Storage = specs::VecStorage<Grabbable>;
 }
 
 impl specs::Component for Player {

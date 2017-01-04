@@ -29,6 +29,7 @@ pub fn register_all(world: &mut World) {
     world.register::<input::Movable>();
 
     world.register::<player::Equip>();
+    world.register::<player::Grabbable>();
     world.register::<player::Player>();
 
     world.register::<map::MapRender>();

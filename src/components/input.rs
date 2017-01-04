@@ -128,11 +128,10 @@ impl specs::System<()> for InputSystem {
 
         match self.state {
             Toplevel => {
-                let (mut res, mut map, mut cameras, focused, mut movables, mut positions, mut lines) = arg.fetch(|world| {
+                let (mut res, mut map, focused, mut movables, mut positions, mut lines) = arg.fetch(|world| {
                     (
                         world.write_resource::<ui::CommandPanelResource>(),
                         world.write_resource::<super::map::Map>(),
-                        world.write::<super::camera::Camera>(),
                         world.read::<super::ui::Focus>(),
                         world.write::<Movable>(),
                         world.write::<Position>(),
@@ -196,11 +195,11 @@ impl specs::System<()> for InputSystem {
             }
 
             Examining => {
-                let (mut res, mut map, mut cameras, movables, mut positions, cover, health) = arg.fetch(|world| {
+                let (mut res, mut map, cameras, movables, mut positions, cover, health) = arg.fetch(|world| {
                     (
                         world.write_resource::<ui::CommandPanelResource>(),
                         world.write_resource::<super::map::Map>(),
-                        world.write::<super::camera::Camera>(),
+                        world.read::<super::camera::Camera>(),
                         world.read::<Movable>(),
                         world.write::<Position>(),
                         world.read::<super::health::Cover>(),

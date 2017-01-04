@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use specs::{self, Join};
 
-use ::components::{ai, combat, health, map, player, position};
+use ::components::{ai, combat, drawable, health, map, player, position};
 use ::components::input::OffsetMovable;
 use ::util;
 
@@ -122,24 +122,42 @@ impl DeadSystem {
 
 impl specs::System<()> for DeadSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
-        let (mut map, entities, dead, players, positions) = arg.fetch(|world| {
+        let (mut map, entities, dead, mut drawables, mut grabbables, players, mut positions) = arg.fetch(|world| {
             (
                 world.write_resource::<map::Map>(),
                 world.entities(),
                 world.read::<ai::Dead>(),
+                world.write::<drawable::StaticDrawable>(),
+                world.write::<player::Grabbable>(),
                 world.read::<player::Player>(),
-                world.read::<position::Position>(),
+                world.write::<position::Position>(),
             )
         });
+
+        let mut to_create = vec![];
 
         for (entity, position, _) in (&entities, &positions, &dead).iter() {
             arg.delete(entity);
             map.vacate(position.x, position.y);
-            // TODO: drop a corpse or something
 
             if let Some(_) = players.get(entity) {
                 self.transitions.send(::screen::StateTransition::GameOver).unwrap();
             }
+            else {
+                // TODO: randomize drop chance, use marker component
+                // to control if an entity even drops stuff
+                let corpse = arg.create();
+                drawables.insert(corpse, drawable::StaticDrawable {
+                    tc: '␣'.into(),
+                });
+                to_create.push((corpse, *position));
+                // grabbables.insert(corpse, player::Grabbable())
+                map.fill(corpse, position.x, position.y);
+            }
+        }
+
+        for (entity, position) in to_create {
+            positions.insert(entity, position);
         }
     }
 }
