@@ -337,6 +337,9 @@ impl specs::System<()> for InputSystem {
                                             self.message_queue.send(format!("Targeted {}, {}", pos.x, pos.y)).unwrap();
                                             attacked.insert(target, attack);
                                         }
+                                        ::util::combat::CombatResult::OutOfRange => {
+                                            self.message_queue.send("You can't hit that with a melee weapon.".into()).unwrap();
+                                        }
                                     }
                                 }
                                 else {

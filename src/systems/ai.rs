@@ -83,6 +83,9 @@ impl specs::System<()> for AiSystem {
                                 self.message_queue.send(format!("Enemy targeted {}, {}", pos.x, pos.y)).unwrap();
                                 attacked.insert(target, attack);
                             }
+                            ::util::combat::CombatResult::OutOfRange => {
+                                self.message_queue.send("Enemy tried a melee weapon out of range.".into()).unwrap();
+                            }
                         }
                         continue;
                     }
