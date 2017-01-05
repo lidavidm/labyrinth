@@ -8,11 +8,18 @@ use ::components::player::{Equip, Item, ItemKind};
 use ::components::position::Position;
 
 pub enum CombatResult {
+    /// No weapon
     NothingEquipped,
+    /// You missed
     Miss,
+    /// You targeted nothing
     HitNothing,
+    /// You hit a wall
     HitEnvironment,
+    /// You hit
     HitEntity(Entity, Position, Attack),
+    /// You're using a melee weapon
+    OutOfRange,
 }
 
 pub trait HasStorage<C> {
@@ -82,14 +89,19 @@ pub fn resolve<H, C>(map: &Map, attacker: Entity, equip: &Equip,
                     }
                 }
 
-                if ::util::distance2((origin.x, origin.y), (target.x, target.y)) > range * range {
+                let dist = ::util::distance2((origin.x, origin.y), (target.x, target.y));
+                if range == 0 && dist > 1 {
+                    return CombatResult::OutOfRange;
+                }
+
+                if dist > range * range {
                     accuracy_penalty -= 100;
                 }
 
                 if targetable.check(entity) && rand::thread_rng().gen_range(0, 1000) < attack.accuracy as i32 + accuracy_penalty {
                     return CombatResult::HitEntity(entity, *target, attack);
                 }
-                else if index == last {
+                else if index == last || range == 0 && dist <= 1 {
                     return CombatResult::Miss;
                 }
             }
