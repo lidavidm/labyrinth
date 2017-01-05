@@ -5,6 +5,7 @@ pub enum ItemKind {
     Weapon {
         damage: (usize, usize),
         accuracy: usize,
+        range: usize,
     },
 }
 
@@ -27,6 +28,10 @@ pub struct Equip {
     pub feet: Option<Item>,
 }
 
+pub struct Inventory {
+    pub contents: Vec<Item>,
+}
+
 /// This entity is the player.
 #[derive(Clone,Debug,Default,Eq,PartialEq)]
 pub struct Player {
@@ -45,6 +50,14 @@ impl Equip {
     }
 }
 
+impl Inventory {
+    pub fn new() -> Inventory {
+        Inventory {
+            contents: Vec::new(),
+        }
+    }
+}
+
 impl specs::Component for Grabbable {
     type Storage = specs::VecStorage<Grabbable>;
 }
@@ -55,4 +68,8 @@ impl specs::Component for Player {
 
 impl specs::Component for Equip {
     type Storage = specs::VecStorage<Equip>;
+}
+
+impl specs::Component for Inventory {
+    type Storage = specs::VecStorage<Inventory>;
 }

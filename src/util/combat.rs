@@ -49,21 +49,21 @@ pub fn resolve<H, C>(map: &Map, attacker: Entity, equip: &Equip,
 
     let attack = if let Some(Item {
         kind: ItemKind::Weapon {
-            damage, accuracy
+            damage, accuracy, range,
         },
         ..
     }) = equip.primary {
-        Some(Attack {
+        Some((Attack {
             damage: damage,
             accuracy: accuracy,
             source: attacker,
-        })
+        }, range))
     }
     else {
         None
     };
 
-    if let Some(attack) = attack {
+    if let Some((attack, range)) = attack {
         let mut accuracy_penalty = 0;
 
         let last = points.len() - 1;
@@ -80,6 +80,10 @@ pub fn resolve<H, C>(map: &Map, attacker: Entity, equip: &Equip,
                         // Don't continue; here - you have a chance to hit
                         // the cover
                     }
+                }
+
+                if ::util::distance2((origin.x, origin.y), (target.x, target.y)) > range * range {
+                    accuracy_penalty -= 100;
                 }
 
                 if targetable.check(entity) && rand::thread_rng().gen_range(0, 1000) < attack.accuracy as i32 + accuracy_penalty {

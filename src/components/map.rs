@@ -283,12 +283,24 @@ impl specs::System<()> for BuilderSystem {
                     kind: super::player::ItemKind::Weapon {
                         damage: (1, 4),
                         accuracy: 700,
+                        range: 5,
+                    },
+                });
+
+                let mut inventory = super::player::Inventory::new();
+                inventory.contents.push(super::player::Item {
+                    name: "Stun Baton".into(),
+                    kind: super::player::ItemKind::Weapon {
+                        damage: (3, 5),
+                        accuracy: 900,
+                        range: 0,
                     },
                 });
 
                 let entity = world.create_later_build()
                     .with(super::input::Movable)
                     .with(super::player::Player::new())
+                    .with(inventory)
                     .with(equip)
                     .with(super::input::Movable)
                     .with(super::position::Position::new(50, 50))
@@ -323,6 +335,7 @@ impl specs::System<()> for BuilderSystem {
                                 kind: super::player::ItemKind::Weapon {
                                     damage: (1, 2),
                                     accuracy: 600,
+                                    range: 3,
                                 },
                             });
 
