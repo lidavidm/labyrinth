@@ -37,6 +37,27 @@ pub struct Inventory {
 pub struct Player {
 }
 
+impl Item {
+    pub fn describe(&self) -> Vec<String> {
+        let mut result = vec![self.name.clone()];
+
+        match self.kind {
+            ItemKind::Weapon { damage, accuracy, range } => {
+                result.push(format!("Damage: {} to {}", damage.0, damage.1 - 1));
+                result.push(format!("Accuracy: {}/1000", accuracy));
+                if range > 0 {
+                    result.push(format!("Range: {}", range));
+                }
+                else {
+                    result.push("Range: Melee".into());
+                }
+            }
+        }
+
+        result
+    }
+}
+
 impl Player {
     pub fn new() -> Player {
         Player {

@@ -43,6 +43,7 @@ enum State {
     Toplevel,
     Examining,
     Targeting,
+    Inventory,
 }
 
 impl InputSystem {
@@ -106,6 +107,13 @@ impl InputSystem {
                 window.print_at(Point::new(0, 2), "  Tab—Cycle Target");
                 window.print_at(Point::new(0, 3), "Space—Confirm Fire");
             }
+
+            Inventory => {
+                window.print_at(Point::new(0, 0), "  Esc—Cancel");
+                window.print_at(Point::new(0, 1), "   WS—Scroll");
+                window.print_at(Point::new(0, 1), "   AD—Prev/Next Page");
+                window.print_at(Point::new(0, 1), "Space—Select");
+            }
         }
     }
 }
@@ -161,6 +169,11 @@ impl specs::System<()> for InputSystem {
                             self.process_movement(Direction::Right, &mut map,
                                                   (&movables, &mut positions).iter());
                             self.end_turn();
+                        }
+
+                        Event::Key(Key::Char('i')) => {
+                            self.state = Inventory;
+                            break;
                         }
 
                         Event::Key(Key::Char('1')) => {
@@ -352,6 +365,34 @@ impl specs::System<()> for InputSystem {
 
                         _ => {}
                     }
+                }
+
+                self.render(&mut res.window);
+            }
+
+            Inventory => {
+                let (
+                    mut res, focused, mut equipped, mut inventory,
+                ) = arg.fetch(|world| {
+                    (
+                        world.write_resource::<ui::CommandPanelResource>(),
+                        world.read::<super::ui::Focus>(),
+                        world.write::<super::player::Equip>(),
+                        world.write::<super::player::Inventory>(),
+                    )
+                });
+
+                if let Some((_, equip, inventory)) = (&focused, &mut equipped, &mut inventory).iter().next() {
+                    for item in inventory.contents.iter() {
+                        for line in item.describe() {
+                            self.message_queue.send(line).unwrap();
+                        }
+                    }
+                    self.state = Toplevel;
+                }
+                else {
+                    self.message_queue.send("Could not find player…".into()).unwrap();
+                    self.state = Toplevel;
                 }
 
                 self.render(&mut res.window);
