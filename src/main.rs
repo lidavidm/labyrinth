@@ -7,6 +7,7 @@ extern crate voodoo;
 pub mod components;
 pub mod screen;
 pub mod systems;
+pub mod ui;
 pub mod util;
 
 use std::sync::mpsc;
