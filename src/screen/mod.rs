@@ -99,3 +99,27 @@ impl StateManager {
         }
     }
 }
+
+#[derive(Clone,Copy,Debug,Eq,PartialEq)]
+pub enum SubScreenEvent<T> {
+    Push(T),
+    Pop,
+}
+
+impl<T: Copy> SubScreenEvent<T> {
+    pub fn apply(&self, stack: &mut Vec<T>) {
+        match self {
+            &SubScreenEvent::Pop => {
+                stack.pop();
+            },
+            &SubScreenEvent::Push(t) => stack.push(t),
+        };
+    }
+
+
+    pub fn apply_all(channel: &mpsc::Receiver<SubScreenEvent<T>>, stack: &mut Vec<T>) {
+        for item in channel.try_iter() {
+            item.apply(stack);
+        }
+    }
+}

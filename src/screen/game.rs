@@ -9,14 +9,24 @@ use voodoo::window::{Window, Point};
 use ::{WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT};
 use ::{components, systems};
 
+#[derive(Clone,Copy,Debug,Eq,PartialEq)]
+enum SubGameScreen {
+    Map,
+    Inventory,
+}
+
 pub struct GameScreen {
+    sub_screen: Vec<SubGameScreen>,
     map_frame: Window,
     msg_frame: Window,
     event_channel: mpsc::Sender<components::input::Event>,
+    sub_screen_channel: mpsc::Receiver<super::SubScreenEvent<SubGameScreen>>,
 }
 
 impl super::Screen for GameScreen {
     fn setup(planner: &mut specs::Planner<()>, transitions: super::TransitionChannel) -> GameScreen {
+        let (sub_screen_sender, sub_screen_channel) = mpsc::channel();
+
         let (map_frame, msg_frame) = {
             let world = planner.mut_world();
             world.add_resource(components::map::Map::new(100, 100));
@@ -66,9 +76,11 @@ impl super::Screen for GameScreen {
             .with(components::map::MapBuilder::new());
 
         GameScreen {
+            sub_screen: vec![SubGameScreen::Map],
             map_frame: map_frame,
             msg_frame: msg_frame,
             event_channel: event_channel,
+            sub_screen_channel: sub_screen_channel,
         }
     }
 
@@ -106,6 +118,8 @@ impl super::Screen for GameScreen {
     }
 
     fn render(&mut self, planner: &mut specs::Planner<()>, compositor: &mut Compositor) {
+        super::SubScreenEvent::apply_all(&self.sub_screen_channel, &mut self.sub_screen);
+
         self.map_frame.refresh(compositor);
         self.msg_frame.refresh(compositor);
         let world = planner.mut_world();
