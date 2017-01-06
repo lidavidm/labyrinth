@@ -10,7 +10,7 @@ use ::{WIDTH, HEIGHT, MAP_WIDTH, MAP_HEIGHT};
 use ::{components, systems};
 
 #[derive(Clone,Copy,Debug,Eq,PartialEq)]
-enum SubGameScreen {
+pub enum SubGameScreen {
     Map,
     Inventory,
 }
@@ -30,8 +30,10 @@ impl super::Screen for GameScreen {
         let (map_frame, msg_frame) = {
             let world = planner.mut_world();
             world.add_resource(components::map::Map::new(100, 100));
-            world.add_resource(systems::ui::InfoPanelResource::new(Window::new(Point::new(MAP_WIDTH + 2, 0), 80 - 2 - MAP_WIDTH, 2)));
-            world.add_resource(systems::ui::CommandPanelResource::new(Window::new(Point::new(0, MAP_HEIGHT + 2), MAP_WIDTH + 2, 4)));
+            world.add_resource(systems::ui::InfoPanelResource::new(
+                Window::new(Point::new(MAP_WIDTH + 2, 0), 80 - 2 - MAP_WIDTH, 2)));
+            world.add_resource(systems::ui::CommandPanelResource::new(
+                Window::new(Point::new(0, MAP_HEIGHT + 2), MAP_WIDTH + 2, 4)));
 
             let mut map_frame = Window::new(Point::new(0, 0), MAP_WIDTH + 2, MAP_HEIGHT + 2);
             map_frame.border();
@@ -42,7 +44,8 @@ impl super::Screen for GameScreen {
             let y = msg_frame.height - 1;
             msg_frame.print_at(Point::new(1, y), "PgUp/Down—Scroll");
             let point = Point::new(msg_frame.position.x + 1, msg_frame.position.y + 1);
-            world.add_resource(systems::ui::MessagesPanelResource::new(Window::new(point, msg_frame.width - 2, msg_frame.height - 2)));
+            world.add_resource(systems::ui::MessagesPanelResource::new(
+                Window::new(point, msg_frame.width - 2, msg_frame.height - 2)));
 
             (map_frame, msg_frame)
         };
@@ -56,7 +59,8 @@ impl super::Screen for GameScreen {
         let (ab_tx, ab_rx) = mpsc::channel();
         let (ae_tx, ae_rx) = mpsc::channel();
 
-        let (input_system, event_channel) = components::input::InputSystem::new(transitions.clone(), msg_resource.clone(), ab_tx, ae_rx);
+        let (input_system, event_channel) = components::input::InputSystem::new(
+            transitions.clone(), sub_screen_sender, msg_resource.clone(), ab_tx, ae_rx);
         planner.add_system(input_system, "input", 100);
         planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
         planner.add_system(components::map::RenderSystem::new(), "map_render", 10);
@@ -121,7 +125,6 @@ impl super::Screen for GameScreen {
         super::SubScreenEvent::apply_all(&self.sub_screen_channel, &mut self.sub_screen);
 
         self.map_frame.refresh(compositor);
-        self.msg_frame.refresh(compositor);
         let world = planner.mut_world();
         let info = world.read_resource::<systems::ui::InfoPanelResource>();
         let command = world.read_resource::<systems::ui::CommandPanelResource>();
@@ -130,7 +133,17 @@ impl super::Screen for GameScreen {
         let drawables = world.read::<components::drawable::DrawableRender>();
         info.window.refresh(compositor);
         command.window.refresh(compositor);
-        messages.window.refresh(compositor);
+
+        match self.sub_screen.last() {
+            Some(&SubGameScreen::Map) | None => {
+                self.msg_frame.refresh(compositor);
+                messages.window.refresh(compositor);
+            }
+            Some(&SubGameScreen::Inventory) => {
+
+            }
+        }
+
         for map in maps.iter() {
             map.refresh(compositor);
         }

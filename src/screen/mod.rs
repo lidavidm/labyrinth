@@ -4,8 +4,8 @@ use specs;
 use termion;
 use voodoo::compositor::Compositor;
 
-mod game;
-mod game_over;
+pub mod game;
+pub mod game_over;
 pub use self::game::GameScreen;
 pub use self::game_over::GameOverScreen;
 

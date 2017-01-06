@@ -28,6 +28,7 @@ pub struct InputSystem {
     ai_turn: Cell<bool>,
     state: State,
     transitions: ::screen::TransitionChannel,
+    sub_screen: mpsc::Sender<::screen::SubScreenEvent<::screen::game::SubGameScreen>>,
 }
 
 #[derive(Clone,Copy,Debug,Eq,PartialEq)]
@@ -47,7 +48,10 @@ enum State {
 }
 
 impl InputSystem {
-    pub fn new(transitions: ::screen::TransitionChannel, message_queue: mpsc::Sender<String>, ai_begin: mpsc::Sender<()>, ai_end: mpsc::Receiver<()>) -> (InputSystem, mpsc::Sender<Event>) {
+    pub fn new(transitions: ::screen::TransitionChannel,
+               sub_screen: mpsc::Sender<::screen::SubScreenEvent<::screen::game::SubGameScreen>>,
+               message_queue: mpsc::Sender<String>,
+               ai_begin: mpsc::Sender<()>, ai_end: mpsc::Receiver<()>) -> (InputSystem, mpsc::Sender<Event>) {
         let (tx, rx) = mpsc::channel();
         (InputSystem {
             inputs: rx,
@@ -57,6 +61,7 @@ impl InputSystem {
             ai_turn: Cell::new(false),
             state: State::Toplevel,
             transitions: transitions,
+            sub_screen: sub_screen,
         }, tx)
     }
 
@@ -111,8 +116,8 @@ impl InputSystem {
             Inventory => {
                 window.print_at(Point::new(0, 0), "  Esc—Cancel");
                 window.print_at(Point::new(0, 1), "   WS—Scroll");
-                window.print_at(Point::new(0, 1), "   AD—Prev/Next Page");
-                window.print_at(Point::new(0, 1), "Space—Select");
+                window.print_at(Point::new(0, 2), "   AD—Prev/Next Page");
+                window.print_at(Point::new(0, 3), "Space—Select");
             }
         }
     }
@@ -173,6 +178,7 @@ impl specs::System<()> for InputSystem {
 
                         Event::Key(Key::Char('i')) => {
                             self.state = Inventory;
+                            self.sub_screen.send(::screen::SubScreenEvent::Push(::screen::game::SubGameScreen::Inventory)).unwrap();
                             break;
                         }
 
@@ -382,17 +388,15 @@ impl specs::System<()> for InputSystem {
                     )
                 });
 
-                if let Some((_, equip, inventory)) = (&focused, &mut equipped, &mut inventory).iter().next() {
-                    for item in inventory.contents.iter() {
-                        for line in item.describe() {
-                            self.message_queue.send(line).unwrap();
+                for event in self.inputs.try_iter() {
+                    match event {
+                        Event::Key(Key::Esc) => {
+                            self.sub_screen.send(::screen::SubScreenEvent::Pop).unwrap();
+                            self.state = Toplevel;
                         }
+
+                        _ => {}
                     }
-                    self.state = Toplevel;
-                }
-                else {
-                    self.message_queue.send("Could not find player…".into()).unwrap();
-                    self.state = Toplevel;
                 }
 
                 self.render(&mut res.window);
