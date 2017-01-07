@@ -29,6 +29,8 @@ pub struct InputSystem {
     state: State,
     transitions: ::screen::TransitionChannel,
     sub_screen: mpsc::Sender<::screen::SubScreenEvent<::screen::game::SubGameScreen>>,
+    inv_valid: bool,
+    inv_list: ::ui::List<::components::player::Item>,
 }
 
 #[derive(Clone,Copy,Debug,Eq,PartialEq)]
@@ -48,7 +50,8 @@ enum State {
 }
 
 impl InputSystem {
-    pub fn new(transitions: ::screen::TransitionChannel,
+    pub fn new(inv_list: ::ui::List<::components::player::Item>,
+               transitions: ::screen::TransitionChannel,
                sub_screen: mpsc::Sender<::screen::SubScreenEvent<::screen::game::SubGameScreen>>,
                message_queue: mpsc::Sender<String>,
                ai_begin: mpsc::Sender<()>, ai_end: mpsc::Receiver<()>) -> (InputSystem, mpsc::Sender<Event>) {
@@ -62,6 +65,8 @@ impl InputSystem {
             state: State::Toplevel,
             transitions: transitions,
             sub_screen: sub_screen,
+            inv_valid: false,
+            inv_list: inv_list,
         }, tx)
     }
 
@@ -378,27 +383,45 @@ impl specs::System<()> for InputSystem {
 
             Inventory => {
                 let (
-                    mut res, focused, mut equipped, mut inventory,
+                    mut res, mut inv, focused, mut equipped, mut inventory,
                 ) = arg.fetch(|world| {
                     (
                         world.write_resource::<ui::CommandPanelResource>(),
+                        world.write_resource::<ui::InventoryPanelResource>(),
                         world.read::<super::ui::Focus>(),
                         world.write::<super::player::Equip>(),
                         world.write::<super::player::Inventory>(),
                     )
                 });
 
+                if !self.inv_valid {
+                    if let Some((_, _, inventory)) = (&focused, &equipped, &inventory).iter().next() {
+                        self.inv_list.contents.clone_from(&inventory.contents);
+                    }
+
+                    self.inv_valid = true;
+                }
+
                 for event in self.inputs.try_iter() {
                     match event {
                         Event::Key(Key::Esc) => {
                             self.sub_screen.send(::screen::SubScreenEvent::Pop).unwrap();
                             self.state = Toplevel;
+
+                            if let Some((_, _, inventory)) = (&focused, &equipped, &mut inventory).iter().next() {
+                                inventory.contents.clone_from(&self.inv_list.contents);
+                            }
+
+                            self.inv_valid = false;
+                            self.inv_list.cursor = 0;
+                            self.inv_list.contents.clear();
                         }
 
                         _ => {}
                     }
                 }
 
+                self.inv_list.refresh(&mut inv.window);
                 self.render(&mut res.window);
             }
         }

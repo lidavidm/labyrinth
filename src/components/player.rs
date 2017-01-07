@@ -37,8 +37,8 @@ pub struct Inventory {
 pub struct Player {
 }
 
-impl Item {
-    pub fn describe(&self) -> Vec<String> {
+impl ::ui::ListRenderable for Item {
+    fn render(&self) -> Vec<String> {
         let mut result = vec![self.name.clone()];
 
         match self.kind {

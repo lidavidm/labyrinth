@@ -28,6 +28,7 @@ pub struct InfoPanelSystem {
 make_resource!(InfoPanelResource);
 make_resource!(CommandPanelResource);
 make_resource!(MessagesPanelResource);
+make_resource!(InventoryPanelResource);
 
 impl InfoPanelSystem {
     pub fn new() -> InfoPanelSystem {

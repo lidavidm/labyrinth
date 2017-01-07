@@ -46,6 +46,8 @@ impl super::Screen for GameScreen {
             let point = Point::new(msg_frame.position.x + 1, msg_frame.position.y + 1);
             world.add_resource(systems::ui::MessagesPanelResource::new(
                 Window::new(point, msg_frame.width - 2, msg_frame.height - 2)));
+            world.add_resource(systems::ui::InventoryPanelResource::new(
+                Window::new(point, msg_frame.width - 2, msg_frame.height - 2)));
 
             (map_frame, msg_frame)
         };
@@ -60,6 +62,7 @@ impl super::Screen for GameScreen {
         let (ae_tx, ae_rx) = mpsc::channel();
 
         let (input_system, event_channel) = components::input::InputSystem::new(
+            ::ui::List::new(Point::new(0, 0), msg_frame.width - 2, msg_frame.height - 2),
             transitions.clone(), sub_screen_sender, msg_resource.clone(), ab_tx, ae_rx);
         planner.add_system(input_system, "input", 100);
         planner.add_system(components::drawable::RenderSystem::new(), "drawable_render", 10);
@@ -128,7 +131,6 @@ impl super::Screen for GameScreen {
         let world = planner.mut_world();
         let info = world.read_resource::<systems::ui::InfoPanelResource>();
         let command = world.read_resource::<systems::ui::CommandPanelResource>();
-        let messages = world.read_resource::<systems::ui::MessagesPanelResource>();
         let maps = world.read::<components::map::MapRender>();
         let drawables = world.read::<components::drawable::DrawableRender>();
         info.window.refresh(compositor);
@@ -136,11 +138,14 @@ impl super::Screen for GameScreen {
 
         match self.sub_screen.last() {
             Some(&SubGameScreen::Map) | None => {
+                let messages = world.read_resource::<systems::ui::MessagesPanelResource>();
                 self.msg_frame.refresh(compositor);
                 messages.window.refresh(compositor);
             }
             Some(&SubGameScreen::Inventory) => {
-
+                let res = world.read_resource::<systems::ui::InventoryPanelResource>();
+                self.msg_frame.refresh(compositor);
+                res.window.refresh(compositor);
             }
         }
 
