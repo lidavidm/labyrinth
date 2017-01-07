@@ -296,6 +296,14 @@ impl specs::System<()> for BuilderSystem {
                         range: 0,
                     },
                 });
+                inventory.contents.push(super::player::Item {
+                    name: "Dirk".into(),
+                    kind: super::player::ItemKind::Weapon {
+                        damage: (4, 5),
+                        accuracy: 800,
+                        range: 0,
+                    },
+                });
 
                 let entity = world.create_later_build()
                     .with(super::input::Movable)

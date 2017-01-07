@@ -1,5 +1,5 @@
 use voodoo::color::ColorValue;
-use voodoo::window::{Point, Window};
+use voodoo::window::{FormattedString, Point, Window};
 
 use super::ColorPair;
 
@@ -47,13 +47,15 @@ impl<T: ListRenderable> List<T> {
 
     pub fn refresh(&self, window: &mut Window) {
         // TODO: account for our width
+
+        let mut rendered = 0;
         if self.cursor > 0 {
             window.print_at(self.position, "...");
+            rendered += 1;
         }
 
-        let mut rendered = 1;
         let mut early_break = false;
-        for item in &self.contents[self.cursor..self.contents.len()] {
+        for (offset, item) in (&self.contents[self.cursor..self.contents.len()]).iter().enumerate() {
             let desc = item.render();
             if rendered + desc.len() >= self.bounds.1 as usize {
                 early_break = true;
@@ -61,7 +63,15 @@ impl<T: ListRenderable> List<T> {
             }
 
             for line in desc {
-                window.print_at(Point::new(self.position.x, self.position.y + rendered as u16), &line);
+                // Pad with spaces to get BG color
+                let line = format!("{: <1$}", line, self.bounds.0 as usize);
+
+                let mut f: FormattedString = (&line).into();
+                if offset == 0 {
+                    f.fg = Some(self.highlight.fg);
+                    f.bg = Some(self.highlight.bg);
+                }
+                window.print_at(Point::new(self.position.x, self.position.y + rendered as u16), f);
                 rendered += 1;
             }
         }
