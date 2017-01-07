@@ -417,10 +417,14 @@ impl specs::System<()> for InputSystem {
                             self.inv_list.contents.clear();
                         }
 
+                        Event::Key(Key::Char('w')) => self.inv_list.move_cursor_up(),
+                        Event::Key(Key::Char('s')) => self.inv_list.move_cursor_down(),
+
                         _ => {}
                     }
                 }
 
+                inv.window.clear();
                 self.inv_list.refresh(&mut inv.window);
                 self.render(&mut res.window);
             }
