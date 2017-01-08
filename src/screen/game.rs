@@ -39,8 +39,6 @@ impl super::Screen for GameScreen {
             map_frame.border();
             map_frame.print_at(Point::new(1, 0), "MAP");
             let mut msg_frame = Window::new(Point::new(MAP_WIDTH + 2, 2), WIDTH - 2 - MAP_WIDTH, HEIGHT - 2);
-            msg_frame.border();
-            msg_frame.print_at(Point::new(1, 0), "MESSAGES");
             let y = msg_frame.height - 1;
             msg_frame.print_at(Point::new(1, y), "PgUp/Down—Scroll");
             let point = Point::new(msg_frame.position.x + 1, msg_frame.position.y + 1);
@@ -139,11 +137,15 @@ impl super::Screen for GameScreen {
         match self.sub_screen.last() {
             Some(&SubGameScreen::Map) | None => {
                 let messages = world.read_resource::<systems::ui::MessagesPanelResource>();
+                self.msg_frame.border();
+                self.msg_frame.print_at(Point::new(1, 0), "MESSAGES");
                 self.msg_frame.refresh(compositor);
                 messages.window.refresh(compositor);
             }
             Some(&SubGameScreen::Inventory) => {
                 let res = world.read_resource::<systems::ui::InventoryPanelResource>();
+                self.msg_frame.border();
+                self.msg_frame.print_at(Point::new(1, 0), "INVENTORY");
                 self.msg_frame.refresh(compositor);
                 res.window.refresh(compositor);
             }
