@@ -10,9 +10,20 @@ pub enum ItemKind {
 }
 
 #[derive(Clone,Debug,Eq,PartialEq)]
+pub enum ItemSlot {
+    Primary,
+    Secondary,
+    Head,
+    Body,
+    Legs,
+    Feet,
+}
+
+#[derive(Clone,Debug,Eq,PartialEq)]
 pub struct Item {
     pub name: String,
     pub kind: ItemKind,
+    pub slot: Option<ItemSlot>,
 }
 
 #[derive(Clone,Debug,Eq,PartialEq)]
@@ -68,6 +79,20 @@ impl Player {
 impl Equip {
     pub fn new() -> Equip {
         Default::default()
+    }
+
+    pub fn equip(&mut self, item: Item) {
+        use self::ItemSlot::*;
+
+        match item.slot {
+            Some(Primary) => self.primary = Some(item),
+            Some(Secondary) => self.secondary = Some(item),
+            Some(Head) => self.head = Some(item),
+            Some(Body) => self.body = Some(item),
+            Some(Legs) => self.legs = Some(item),
+            Some(Feet) => self.feet = Some(item),
+            None => {},
+        }
     }
 }
 

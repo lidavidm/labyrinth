@@ -420,6 +420,21 @@ impl specs::System<()> for InputSystem {
                         Event::Key(Key::Char('w')) => self.inv_list.move_cursor_up(),
                         Event::Key(Key::Char('s')) => self.inv_list.move_cursor_down(),
 
+                        Event::Key(Key::Char(' ')) => {
+                            let result = if let Some(item) = self.inv_list.get_selected() {
+                                if let Some((_, equip, _)) = (&focused, &mut equipped, &inventory).iter().next() {
+                                    // TODO: if there's an equipped item, place it in the inventory
+                                    equip.equip(item.clone());
+                                }
+                                Some(self.inv_list.cursor)
+                            } else { None };
+
+                            if let Some(idx) = result {
+                                self.inv_list.move_cursor_up();
+                                self.inv_list.contents.remove(idx);
+                            }
+                        },
+
                         _ => {}
                     }
                 }

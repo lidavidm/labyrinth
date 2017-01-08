@@ -285,6 +285,7 @@ impl specs::System<()> for BuilderSystem {
                         accuracy: 700,
                         range: 5,
                     },
+                    slot: Some(super::player::ItemSlot::Primary),
                 });
 
                 let mut inventory = super::player::Inventory::new();
@@ -295,6 +296,7 @@ impl specs::System<()> for BuilderSystem {
                         accuracy: 900,
                         range: 0,
                     },
+                    slot: Some(super::player::ItemSlot::Secondary),
                 });
                 inventory.contents.push(super::player::Item {
                     name: "Dirk".into(),
@@ -303,6 +305,7 @@ impl specs::System<()> for BuilderSystem {
                         accuracy: 800,
                         range: 0,
                     },
+                    slot: Some(super::player::ItemSlot::Secondary),
                 });
 
                 let entity = world.create_later_build()
@@ -345,6 +348,7 @@ impl specs::System<()> for BuilderSystem {
                                     accuracy: 600,
                                     range: 3,
                                 },
+                                slot: Some(super::player::ItemSlot::Primary),
                             });
 
                             let entity = world.create_later_build()
