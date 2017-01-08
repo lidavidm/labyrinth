@@ -424,14 +424,22 @@ impl specs::System<()> for InputSystem {
                             let result = if let Some(item) = self.inv_list.get_selected() {
                                 if let Some((_, equip, _)) = (&focused, &mut equipped, &inventory).iter().next() {
                                     // TODO: if there's an equipped item, place it in the inventory
-                                    equip.equip(item.clone());
+                                    let item = equip.equip(item.clone());
+                                    Some((item, self.inv_list.cursor))
                                 }
-                                Some(self.inv_list.cursor)
+                                else {
+                                    None
+                                }
                             } else { None };
 
-                            if let Some(idx) = result {
-                                self.inv_list.move_cursor_up();
-                                self.inv_list.contents.remove(idx);
+                            if let Some((old_item, idx)) = result {
+                                if let Some(item) = old_item {
+                                    self.inv_list.contents[idx] = item;
+                                }
+                                else {
+                                    self.inv_list.move_cursor_up();
+                                    self.inv_list.contents.remove(idx);
+                                }
                             }
                         },
 

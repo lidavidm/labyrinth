@@ -81,17 +81,41 @@ impl Equip {
         Default::default()
     }
 
-    pub fn equip(&mut self, item: Item) {
+    pub fn equip(&mut self, item: Item) -> Option<Item> {
         use self::ItemSlot::*;
 
         match item.slot {
-            Some(Primary) => self.primary = Some(item),
-            Some(Secondary) => self.secondary = Some(item),
-            Some(Head) => self.head = Some(item),
-            Some(Body) => self.body = Some(item),
-            Some(Legs) => self.legs = Some(item),
-            Some(Feet) => self.feet = Some(item),
-            None => {},
+            Some(Primary) => {
+                let old = self.primary.clone();
+                self.primary = Some(item);
+                old
+            }
+            Some(Secondary) => {
+                let old = self.secondary.clone();
+                self.secondary = Some(item);
+                old
+            }
+            Some(Head) => {
+                let old = self.head.clone();
+                self.head = Some(item);
+                old
+            }
+            Some(Body) => {
+                let old = self.body.clone();
+                self.body = Some(item);
+                old
+            }
+            Some(Legs) => {
+                let old = self.legs.clone();
+                self.legs = Some(item);
+                old
+            }
+            Some(Feet) => {
+                let old = self.feet.clone();
+                self.feet = Some(item);
+                old
+            }
+            None => None,
         }
     }
 }
