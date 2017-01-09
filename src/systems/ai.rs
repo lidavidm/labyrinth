@@ -67,7 +67,8 @@ impl specs::System<()> for AiSystem {
                     if let Some(_) = map.contents(x, y) {
                         match ::util::combat::resolve(
                             &map, me, &equip, *position,
-                            position::Position::new(player_position.0, player_position.1), &healths, &covers) {
+                            position::Position::new(player_position.0, player_position.1),
+                            false, &healths, &covers) {
                             ::util::combat::CombatResult::NothingEquipped => {
                             }
                             ::util::combat::CombatResult::Miss => {

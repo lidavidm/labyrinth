@@ -45,7 +45,7 @@ pub enum Event {
 enum State {
     Toplevel,
     Examining,
-    Targeting,
+    Targeting(bool),
     Inventory,
 }
 
@@ -111,7 +111,7 @@ impl InputSystem {
                 window.print_at(Point::new(0, 2), "Mouse—Describe");
             }
 
-            Targeting => {
+            Targeting(_) => {
                 window.print_at(Point::new(0, 0), "  Esc—Cancel");
                 window.print_at(Point::new(0, 1), " WASD—Manual Aim");
                 window.print_at(Point::new(0, 2), "  Tab—Cycle Target");
@@ -192,7 +192,7 @@ impl specs::System<()> for InputSystem {
                             break;
                         }
 
-                        Event::Key(Key::Char('3')) => {
+                        Event::Key(Key::Char(c @ '3')) | Event::Key(Key::Char(c @ '4')) => {
                             movables.clear();
 
                             let mut start_pos = Position { x: 0, y: 0 };
@@ -207,7 +207,7 @@ impl specs::System<()> for InputSystem {
                                 end: start_pos,
                             });
                             movables.insert(e, Movable);
-                            self.state = Targeting;
+                            self.state = Targeting(c == '4');
                             break;
                         }
 
@@ -281,7 +281,7 @@ impl specs::System<()> for InputSystem {
                 self.render(&mut res.window);
             }
 
-            Targeting => {
+            Targeting(is_melee) => {
                 let (
                     mut res, mut map, entities,
                     cameras, focused, mut movables,
@@ -344,7 +344,7 @@ impl specs::System<()> for InputSystem {
                                 self.end_turn();
 
                                 if let (Some((start, end)), Some((attacker, equip))) = (points, attacker) {
-                                    match ::util::combat::resolve(&map, attacker, &equip, start, end, &healths, &covers) {
+                                    match ::util::combat::resolve(&map, attacker, &equip, start, end, is_melee, &healths, &covers) {
                                         ::util::combat::CombatResult::NothingEquipped => {
                                             self.message_queue.send("You have nothing equipped!".into()).unwrap();
                                         }

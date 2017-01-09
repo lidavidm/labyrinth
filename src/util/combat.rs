@@ -49,17 +49,18 @@ impl<C, A, D> HasStorage<C> for specs::Storage<C, A, D>
 
 pub fn resolve<H, C>(map: &Map, attacker: Entity, equip: &Equip,
                      origin: Position, target: Position,
+                     is_melee: bool,
                      targetable: &H,
                      cover: &C) -> CombatResult
     where H: HasStorage<Health>, C: HasStorage<Cover> {
     let points = ::util::bresenham(origin, target);
 
-    let attack = if let Some(Item {
+    let attack = if let &Some(Item {
         kind: ItemKind::Weapon {
             damage, accuracy, range,
         },
         ..
-    }) = equip.primary {
+    }) = if is_melee { &equip.secondary } else { &equip.primary } {
         Some((Attack {
             damage: damage,
             accuracy: accuracy,
