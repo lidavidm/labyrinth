@@ -29,6 +29,12 @@ pub struct Item {
 #[derive(Clone,Debug,Eq,PartialEq)]
 pub struct Grabbable(Item);
 
+#[derive(Debug,Eq,PartialEq)]
+pub struct DropsLoot {
+    pub chance: usize,
+    pub items: Vec<Item>,
+}
+
 #[derive(Clone,Debug,Default,Eq,PartialEq)]
 pub struct Equip {
     pub primary: Option<Item>,
@@ -132,8 +138,12 @@ impl specs::Component for Grabbable {
     type Storage = specs::VecStorage<Grabbable>;
 }
 
+impl specs::Component for DropsLoot {
+    type Storage = specs::HashMapStorage<DropsLoot>;
+}
+
 impl specs::Component for Player {
-    type Storage = specs::VecStorage<Player>;
+    type Storage = specs::HashMapStorage<Player>;
 }
 
 impl specs::Component for Equip {

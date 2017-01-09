@@ -1,4 +1,6 @@
 use std::sync::mpsc;
+
+use rand::{self, Rng};
 use specs::{self, Join};
 
 use ::components::{ai, combat, drawable, health, map, player, position};
@@ -126,12 +128,13 @@ impl DeadSystem {
 
 impl specs::System<()> for DeadSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
-        let (mut map, entities, dead, mut drawables, mut grabbables, players, mut positions) = arg.fetch(|world| {
+        let (mut map, entities, dead, mut drawables, mut drops_loot, mut grabbables, players, mut positions) = arg.fetch(|world| {
             (
                 world.write_resource::<map::Map>(),
                 world.entities(),
                 world.read::<ai::Dead>(),
                 world.write::<drawable::StaticDrawable>(),
+                world.write::<player::DropsLoot>(),
                 world.write::<player::Grabbable>(),
                 world.read::<player::Player>(),
                 world.write::<position::Position>(),
@@ -148,15 +151,17 @@ impl specs::System<()> for DeadSystem {
                 self.transitions.send(::screen::StateTransition::GameOver).unwrap();
             }
             else {
-                // TODO: randomize drop chance, use marker component
-                // to control if an entity even drops stuff
-                let corpse = arg.create();
-                drawables.insert(corpse, drawable::StaticDrawable {
-                    tc: '␣'.into(),
-                });
-                to_create.push((corpse, *position));
-                // grabbables.insert(corpse, player::Grabbable())
-                map.fill(corpse, position.x, position.y);
+                if let Some(drop_table) = drops_loot.get(entity) {
+                    if rand::thread_rng().gen_range(0, 1000) < drop_table.chance {
+                        let corpse = arg.create();
+                        drawables.insert(corpse, drawable::StaticDrawable {
+                            tc: '␣'.into(),
+                        });
+                        to_create.push((corpse, *position));
+                        // grabbables.insert(corpse, player::Grabbable())
+                        map.fill(corpse, position.x, position.y);
+                    }
+                }
             }
         }
 
