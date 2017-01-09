@@ -1,3 +1,6 @@
+extern crate env_logger;
+extern crate log;
+extern crate log_panics;
 extern crate rand;
 extern crate specs;
 extern crate termion;
@@ -41,6 +44,9 @@ fn run() -> f64 {
 
     use voodoo::color::ColorValue;
     use voodoo::terminal::{Mode, Terminal};
+
+    env_logger::init().unwrap();
+    log_panics::init();
 
     let mut world = specs::World::new();
     components::register_all(&mut world);

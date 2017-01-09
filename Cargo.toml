@@ -4,8 +4,14 @@ version = "0.1.0"
 authors = ["David Li <li.davidm96@gmail.com>"]
 
 [dependencies]
+env_logger = "0.3"
+log = "0.3"
 rand = "0.3"
 specs = "0.7"
 termion = "1.1.2"
 time = "0.1"
 voodoo = { path = 'voodoo' }
+
+[dependencies.log-panics]
+version = "1.1.0"
+features = ["with-backtrace"]
