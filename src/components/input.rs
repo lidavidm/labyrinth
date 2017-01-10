@@ -278,7 +278,7 @@ impl specs::System<()> for InputSystem {
             }
 
             Examining => {
-                let (mut res, mut map, cameras, movables, mut positions, cover, health) = arg.fetch(|world| {
+                let (mut res, mut map, cameras, movables, mut positions, cover, health, grabbable) = arg.fetch(|world| {
                     (
                         world.write_resource::<ui::CommandPanelResource>(),
                         world.write_resource::<super::map::Map>(),
@@ -287,6 +287,7 @@ impl specs::System<()> for InputSystem {
                         world.write::<Position>(),
                         world.read::<super::health::Cover>(),
                         world.read::<super::health::Health>(),
+                        world.read::<super::player::Grabbable>(),
                     )
                 });
                 for event in self.inputs.try_iter() {
@@ -326,6 +327,14 @@ impl specs::System<()> for InputSystem {
                                 }
                                 if let Some(_) = cover.get(entity) {
                                     self.message_queue.send("Provides cover".into()).unwrap();
+                                }
+                                if let Some(g) = grabbable.get(entity) {
+                                    use ui::list::ListRenderable;
+
+                                    self.message_queue.send("Dropped item".into()).unwrap();
+                                    for line in g.0.render() {
+                                        self.message_queue.send(line.into()).unwrap();
+                                    }
                                 }
                             }
                             else {
