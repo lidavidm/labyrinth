@@ -97,6 +97,7 @@ impl InputSystem {
             if let Some(entity) = map.contents(new_x, new_y) {
                 if let Some(&super::player::Grabbable(ref item)) = grabbables.get(entity) {
                     inventory.contents.push(item.clone());
+                    self.message_queue.send(format!("Picked up {}", item.name)).unwrap();
                     to_delete.push(entity);
                 }
             }
