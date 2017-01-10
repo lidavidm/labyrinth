@@ -80,6 +80,31 @@ impl InputSystem {
         }
     }
 
+    fn take_items<'a, I, G>(&self, direction: Direction, map: &mut Map, movables: I, grabbables: G)
+        -> Vec<specs::Entity>
+        where I: Iterator<Item=(&'a Movable, &'a Position, &'a mut super::player::Inventory)>,
+              G: ::util::HasStorage<super::player::Grabbable>, {
+        let mut to_delete = Vec::new();
+        let offset = direction.offset();
+
+        for (_, position, inventory) in movables {
+            let new_x = position.x as i32 + offset.0;
+            let new_y = position.y as i32 + offset.1;
+
+            let new_x = if new_x < 0 { 0 } else { new_x as usize };
+            let new_y = if new_y < 0 { 0 } else { new_y as usize };
+
+            if let Some(entity) = map.contents(new_x, new_y) {
+                if let Some(&super::player::Grabbable(ref item)) = grabbables.get(entity) {
+                    inventory.contents.push(item.clone());
+                    to_delete.push(entity);
+                }
+            }
+        }
+
+        to_delete
+    }
+
     fn end_turn(&self) {
         self.ai_begin.send(()).unwrap();
         self.ai_turn.set(false);
@@ -146,7 +171,7 @@ impl specs::System<()> for InputSystem {
 
         match self.state {
             Toplevel => {
-                let (mut res, mut map, focused, mut movables, mut positions, mut lines) = arg.fetch(|world| {
+                let (mut res, mut map, focused, mut movables, mut positions, mut lines, mut inventories, mut grabbables) = arg.fetch(|world| {
                     (
                         world.write_resource::<ui::CommandPanelResource>(),
                         world.write_resource::<super::map::Map>(),
@@ -154,6 +179,8 @@ impl specs::System<()> for InputSystem {
                         world.write::<Movable>(),
                         world.write::<Position>(),
                         world.write::<super::drawable::LineDrawable>(),
+                        world.write::<super::player::Inventory>(),
+                        world.write::<super::player::Grabbable>(),
                     )
                 });
                 for event in self.inputs.try_iter() {
@@ -161,21 +188,60 @@ impl specs::System<()> for InputSystem {
                         Event::Key(Key::Esc) => self.transitions.send(::screen::StateTransition::Quit).unwrap(),
 
                         Event::Key(Key::Char('w')) => {
+                            for entity in self.take_items(Direction::Up, &mut map,
+                                                          (&movables, &positions, &mut inventories).iter(),
+                                                          &grabbables) {
+                                if let Some(pos) = positions.get(entity) {
+                                    map.vacate(pos.x, pos.y);
+                                }
+                                positions.remove(entity);
+                                arg.delete(entity);
+                            }
                             self.process_movement(Direction::Up, &mut map,
                                                   (&movables, &mut positions).iter());
                             self.end_turn();
                         }
                         Event::Key(Key::Char('s')) => {
+                            for entity in self.take_items(Direction::Down, &mut map,
+                                                          (&movables, &positions, &mut inventories).iter(),
+                                                          &grabbables) {
+                                if let Some(pos) = positions.get(entity) {
+                                    map.vacate(pos.x, pos.y);
+                                }
+                                positions.remove(entity);
+                                arg.delete(entity);
+                            }
+
                             self.process_movement(Direction::Down, &mut map,
                                                   (&movables, &mut positions).iter());
                             self.end_turn();
                         }
                         Event::Key(Key::Char('a')) => {
+                            for entity in self.take_items(Direction::Left, &mut map,
+                                                          (&movables, &positions, &mut inventories).iter(),
+                                                          &grabbables) {
+                                if let Some(pos) = positions.get(entity) {
+                                    map.vacate(pos.x, pos.y);
+                                }
+                                positions.remove(entity);
+                                arg.delete(entity);
+                            }
+
                             self.process_movement(Direction::Left, &mut map,
                                                   (&movables, &mut positions).iter());
                             self.end_turn();
                         }
                         Event::Key(Key::Char('d')) => {
+                            for entity in self.take_items(Direction::Right, &mut map,
+                                                          (&movables, &positions, &mut inventories).iter(),
+                                                          &grabbables) {
+                                if let Some(pos) = positions.get(entity) {
+                                    map.vacate(pos.x, pos.y);
+                                }
+                                positions.remove(entity);
+                                arg.delete(entity);
+                            }
+
                             self.process_movement(Direction::Right, &mut map,
                                                   (&movables, &mut positions).iter());
                             self.end_turn();

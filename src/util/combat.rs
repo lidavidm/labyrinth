@@ -1,5 +1,7 @@
 use rand::{self, Rng};
-use specs::{self, Entity};
+use specs::Entity;
+
+use super::HasStorage;
 
 use ::components::combat::Attack;
 use ::components::health::{Cover, Health};
@@ -20,31 +22,6 @@ pub enum CombatResult {
     HitEntity(Entity, Position, Attack),
     /// You're using a melee weapon
     OutOfRange,
-}
-
-pub trait HasStorage<C> {
-    fn check(&self, entity: Entity) -> bool;
-    fn get(&self, entity: Entity) -> Option<&C>;
-}
-
-impl<C, A, D> HasStorage<C> for specs::Storage<C, A, D>
-    where
-    C: specs::Component,
-    A: ::std::ops::Deref<Target=specs::Allocator>,
-    D: ::std::ops::Deref<Target=specs::MaskedStorage<C>>
-{
-    fn check(&self, entity: Entity) -> bool {
-        if let Some(_) = self.get(entity) {
-            true
-        }
-        else {
-            false
-        }
-    }
-
-    fn get(&self, entity: Entity) -> Option<&C> {
-        specs::Storage::get(self, entity)
-    }
 }
 
 pub fn resolve<H, C>(map: &Map, attacker: Entity, equip: &Equip,

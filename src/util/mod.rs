@@ -1,3 +1,5 @@
+use specs::{self, Entity};
+
 use components::position::Position;
 
 pub mod combat;
@@ -157,4 +159,49 @@ pub fn bresenham(start: Position, end: Position) -> Vec<Position> {
     }
 
     result
+}
+
+pub trait HasStorage<C> {
+    fn check(&self, entity: Entity) -> bool;
+    fn get(&self, entity: Entity) -> Option<&C>;
+}
+
+impl<C, A, D> HasStorage<C> for specs::Storage<C, A, D>
+    where
+    C: specs::Component,
+    A: ::std::ops::Deref<Target=specs::Allocator>,
+    D: ::std::ops::Deref<Target=specs::MaskedStorage<C>>
+{
+    fn check(&self, entity: Entity) -> bool {
+        if let Some(_) = self.get(entity) {
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    fn get(&self, entity: Entity) -> Option<&C> {
+        specs::Storage::get(self, entity)
+    }
+}
+
+impl<'a, C, A, D> HasStorage<C> for &'a specs::Storage<C, A, D>
+    where
+    C: specs::Component,
+    A: ::std::ops::Deref<Target=specs::Allocator>,
+    D: ::std::ops::Deref<Target=specs::MaskedStorage<C>>
+{
+    fn check(&self, entity: Entity) -> bool {
+        if let Some(_) = self.get(entity) {
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    fn get(&self, entity: Entity) -> Option<&C> {
+        specs::Storage::get(self, entity)
+    }
 }
