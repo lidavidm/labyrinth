@@ -451,12 +451,14 @@ impl specs::System<()> for InputSystem {
 
             Inventory => {
                 let (
-                    mut res, mut inv, focused, mut equipped, mut inventory,
+                    mut res, mut inv, focused, mut dr, mut health, mut equipped, mut inventory,
                 ) = arg.fetch(|world| {
                     (
                         world.write_resource::<ui::CommandPanelResource>(),
                         world.write_resource::<ui::InventoryPanelResource>(),
                         world.read::<super::ui::Focus>(),
+                        world.write::<super::combat::DamageReduction>(),
+                        world.write::<super::health::Health>(),
                         world.write::<super::player::Equip>(),
                         world.write::<super::player::Inventory>(),
                     )
@@ -493,6 +495,23 @@ impl specs::System<()> for InputSystem {
                                 if let Some((_, equip, _)) = (&focused, &mut equipped, &inventory).iter().next() {
                                     // TODO: if there's an equipped item, place it in the inventory
                                     let item = equip.equip(item.clone());
+
+                                    // Recompute health boost, damage reduction
+                                    if let Some((_, dr, hp)) = (&focused, &mut dr, &mut health).iter().next() {
+                                        dr.value = 0;
+                                        hp.max_health = hp.base_health;
+                                        for item in equip.list_equipped() {
+                                            if let super::player::ItemKind::Armor { health, damage_reduction } = item.kind {
+                                                dr.value += damage_reduction;
+                                                hp.max_health += health;
+                                            }
+                                        }
+
+                                        if dr.value > 0 {
+                                            self.message_queue.send(format!("DR: {}", dr.value)).unwrap();
+                                        }
+                                    }
+
                                     Some((item, self.inv_list.cursor))
                                 }
                                 else {
@@ -509,8 +528,6 @@ impl specs::System<()> for InputSystem {
                                     self.inv_list.contents.remove(idx);
                                 }
                             }
-
-                            // Recompute health boost, damage reduction
                         },
 
                         _ => {}

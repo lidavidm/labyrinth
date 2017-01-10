@@ -290,6 +290,7 @@ impl specs::System<()> for BuilderSystem {
 
                 let entity = world.create_later_build()
                     .with(super::input::Movable)
+                    .with(super::combat::DamageReduction { value: 0 })
                     .with(super::player::Player::new())
                     .with(super::player::Inventory::new())
                     .with(equip)
@@ -354,15 +355,6 @@ impl specs::System<()> for BuilderSystem {
                                         slot: Some(super::player::ItemSlot::Primary),
                                     },
                                     super::player::Item {
-                                        name: "Assault Rifle".into(),
-                                        kind: super::player::ItemKind::Weapon {
-                                            damage: (1, 4),
-                                            accuracy: 600,
-                                            range: 3,
-                                        },
-                                        slot: Some(super::player::ItemSlot::Primary),
-                                    },
-                                    super::player::Item {
                                         name: "Shotgun".into(),
                                         kind: super::player::ItemKind::Weapon {
                                             damage: (3, 7),
@@ -370,6 +362,14 @@ impl specs::System<()> for BuilderSystem {
                                             range: 1,
                                         },
                                         slot: Some(super::player::ItemSlot::Primary),
+                                    },
+                                    super::player::Item {
+                                        name: "Kevlar Vest".into(),
+                                        kind: super::player::ItemKind::Armor {
+                                            health: 2,
+                                            damage_reduction: 1,
+                                        },
+                                        slot: Some(super::player::ItemSlot::Body),
                                     },
                                 ]))
                                 .with(super::position::Position::new(x, y))

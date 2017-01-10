@@ -19,13 +19,14 @@ impl CombatSystem {
 
 impl specs::System<()> for CombatSystem {
     fn run(&mut self, arg: specs::RunArg, _: ()) {
-        let (entities, players, mut chasers, mut dead, mut attacked, mut healths, positions) = arg.fetch(|world| {
+        let (entities, players, mut chasers, mut dead, mut attacked, dr, mut healths, positions) = arg.fetch(|world| {
             (
                 world.entities(),
                 world.read::<player::Player>(),
                 world.write::<ai::ChaseBehavior>(),
                 world.write::<ai::Dead>(),
                 world.write::<combat::Attack>(),
+                world.read::<combat::DamageReduction>(),
                 world.write::<health::Health>(),
                 world.read::<position::Position>(),
             )
@@ -34,7 +35,16 @@ impl specs::System<()> for CombatSystem {
         let mut to_delete = vec![];
         let mut to_kill = vec![];
         for (entity, attack, health) in (&entities, &mut attacked, &mut healths).iter() {
-            let damage = rand::thread_rng().gen_range(attack.damage.0, attack.damage.1);
+            let mut damage = rand::thread_rng().gen_range(attack.damage.0, attack.damage.1);
+
+            if let Some(dr) = dr.get(entity) {
+                let orig = damage;
+                damage = damage.saturating_sub(dr.value);
+                if dr.value > 0 {
+                    self.message_queue.send(format!("DR: {} -> {}", orig, damage)).unwrap();
+                }
+            }
+
             if damage >= health.health {
                 self.message_queue.send(format!("Hit for {} damage, killed!", damage)).unwrap();
                 to_kill.push(entity);

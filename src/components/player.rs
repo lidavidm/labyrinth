@@ -144,6 +144,30 @@ impl Equip {
             None => None,
         }
     }
+
+    pub fn list_equipped(&self) -> Vec<&Item> {
+        let mut result = Vec::new();
+        if let Some(ref i) = self.primary {
+            result.push(i);
+        }
+        if let Some(ref i) = self.secondary {
+            result.push(i);
+        }
+        if let Some(ref i) = self.head {
+            result.push(i);
+        }
+        if let Some(ref i) = self.body {
+            result.push(i);
+        }
+        if let Some(ref i) = self.legs {
+            result.push(i);
+        }
+        if let Some(ref i) = self.feet {
+            result.push(i);
+        }
+
+        result
+    }
 }
 
 impl Inventory {

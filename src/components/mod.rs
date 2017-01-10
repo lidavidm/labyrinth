@@ -18,6 +18,7 @@ pub fn register_all(world: &mut World) {
     world.register::<camera::Camera>();
 
     world.register::<combat::Attack>();
+    world.register::<combat::DamageReduction>();
 
     world.register::<drawable::LineDrawable>();
     world.register::<drawable::StaticDrawable>();
