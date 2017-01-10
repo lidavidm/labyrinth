@@ -153,13 +153,15 @@ impl specs::System<()> for DeadSystem {
             else {
                 if let Some(drop_table) = drops_loot.get(entity) {
                     if rand::thread_rng().gen_range(0, 1000) < drop_table.chance {
-                        let corpse = arg.create();
-                        drawables.insert(corpse, drawable::StaticDrawable {
-                            tc: '␣'.into(),
-                        });
-                        to_create.push((corpse, *position));
-                        // grabbables.insert(corpse, player::Grabbable())
-                        map.fill(corpse, position.x, position.y);
+                        if let Some(loot) = rand::thread_rng().choose(&drop_table.items) {
+                            let corpse = arg.create();
+                            drawables.insert(corpse, drawable::StaticDrawable {
+                                tc: '␣'.into(),
+                            });
+                            to_create.push((corpse, *position));
+                            grabbables.insert(corpse, player::Grabbable(loot.clone()));
+                            map.fill(corpse, position.x, position.y);
+                        }
                     }
                 }
             }

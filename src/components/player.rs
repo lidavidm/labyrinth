@@ -31,7 +31,7 @@ pub struct Item {
 }
 
 #[derive(Clone,Debug,Eq,PartialEq)]
-pub struct Grabbable(Item);
+pub struct Grabbable(pub Item);
 
 #[derive(Debug,Eq,PartialEq)]
 pub struct DropsLoot {
@@ -89,6 +89,15 @@ impl ::ui::ListRenderable for Item {
 impl Player {
     pub fn new() -> Player {
         Player {
+        }
+    }
+}
+
+impl DropsLoot {
+    pub fn new<I: Into<Vec<Item>>>(chance: usize, items: I) -> DropsLoot {
+        DropsLoot {
+            chance: chance,
+            items: items.into(),
         }
     }
 }

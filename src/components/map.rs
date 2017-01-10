@@ -354,6 +354,44 @@ impl specs::System<()> for BuilderSystem {
                             let entity = world.create_later_build()
                                 .with(super::ai::ChaseBehavior::new())
                                 .with(equip)
+                                .with(super::player::DropsLoot::new(400, vec![
+                                    super::player::Item {
+                                        name: "Stun Baton".into(),
+                                        kind: super::player::ItemKind::Weapon {
+                                            damage: (3, 4),
+                                            accuracy: 800,
+                                            range: 0,
+                                        },
+                                        slot: Some(super::player::ItemSlot::Secondary),
+                                    },
+                                    super::player::Item {
+                                        name: "Sniper Rifle".into(),
+                                        kind: super::player::ItemKind::Weapon {
+                                            damage: (2, 7),
+                                            accuracy: 700,
+                                            range: 7,
+                                        },
+                                        slot: Some(super::player::ItemSlot::Primary),
+                                    },
+                                    super::player::Item {
+                                        name: "Assault Rifle".into(),
+                                        kind: super::player::ItemKind::Weapon {
+                                            damage: (1, 4),
+                                            accuracy: 600,
+                                            range: 3,
+                                        },
+                                        slot: Some(super::player::ItemSlot::Primary),
+                                    },
+                                    super::player::Item {
+                                        name: "Shotgun".into(),
+                                        kind: super::player::ItemKind::Weapon {
+                                            damage: (3, 7),
+                                            accuracy: 600,
+                                            range: 1,
+                                        },
+                                        slot: Some(super::player::ItemSlot::Primary),
+                                    },
+                                ]))
                                 .with(super::position::Position::new(x, y))
                                 .with(super::drawable::StaticDrawable {
                                     tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
