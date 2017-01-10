@@ -288,30 +288,10 @@ impl specs::System<()> for BuilderSystem {
                     slot: Some(super::player::ItemSlot::Primary),
                 });
 
-                let mut inventory = super::player::Inventory::new();
-                inventory.contents.push(super::player::Item {
-                    name: "Stun Baton".into(),
-                    kind: super::player::ItemKind::Weapon {
-                        damage: (3, 5),
-                        accuracy: 900,
-                        range: 0,
-                    },
-                    slot: Some(super::player::ItemSlot::Secondary),
-                });
-                inventory.contents.push(super::player::Item {
-                    name: "Dirk".into(),
-                    kind: super::player::ItemKind::Weapon {
-                        damage: (4, 5),
-                        accuracy: 800,
-                        range: 0,
-                    },
-                    slot: Some(super::player::ItemSlot::Secondary),
-                });
-
                 let entity = world.create_later_build()
                     .with(super::input::Movable)
                     .with(super::player::Player::new())
-                    .with(inventory)
+                    .with(super::player::Inventory::new())
                     .with(equip)
                     .with(super::input::Movable)
                     .with(super::position::Position::new(50, 50))
