@@ -7,6 +7,10 @@ pub enum ItemKind {
         accuracy: usize,
         range: usize,
     },
+    Armor {
+        health: usize,
+        damage_reduction: usize,
+    },
 }
 
 #[derive(Clone,Debug,Eq,PartialEq)]
@@ -68,6 +72,13 @@ impl ::ui::ListRenderable for Item {
                 else {
                     result.push("Range: Melee".into());
                 }
+            }
+            ItemKind::Armor { health, damage_reduction } => {
+                if let Some(ref slot) = self.slot {
+                    result.push(format!("{:?} Armor", slot));
+                }
+                result.push(format!("Health Bonus: {}", health));
+                result.push(format!("Damage Reduction: {}", damage_reduction));
             }
         }
 
