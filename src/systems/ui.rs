@@ -45,15 +45,10 @@ impl specs::System<()> for InfoPanelSystem {
 
         for (_, health) in (&focus, &health).iter() {
             res.window.print_at(Point::new(1, 0), "Health ");
-            res.window.print_at(Point::new(1, 1), "Stamina");
             let h = format!("{:30}", format!("{}/{}", health.health, health.max_health));
-            let s = format!("{:30}", format!("{}/{}", health.stamina as usize, health.max_stamina as usize));
             let mut hfs: FormattedString = (&h).into();
-            let mut sfs: FormattedString = (&s).into();
             hfs.bg = Some(ColorValue::Red);
-            sfs.bg = Some(ColorValue::Green);
             res.window.print_at(Point::new(9, 0), hfs);
-            res.window.print_at(Point::new(9, 1), sfs);
         }
     }
 }

@@ -298,7 +298,7 @@ impl specs::System<()> for BuilderSystem {
                     .with(super::drawable::StaticDrawable {
                         tc: Into::<TermCell>::into('@').with_fg(ColorValue::Green)
                     })
-                    .with(super::health::Health::new(10, 10, 100.0, 100.0))
+                    .with(super::health::Health::new(10, 10))
                     .with(super::ui::Focus)
                     .build();
                 map.fill(entity, 50, 50);
@@ -376,7 +376,7 @@ impl specs::System<()> for BuilderSystem {
                                 .with(super::drawable::StaticDrawable {
                                     tc: Into::<TermCell>::into('e').with_fg(ColorValue::Red),
                                 })
-                                .with(super::health::Health::new(3, 3, 100.0, 100.0))
+                                .with(super::health::Health::new(3, 3))
                                 .build();
                             map.fill(entity, x, y);
                             break;
@@ -396,7 +396,7 @@ impl specs::System<()> for BuilderSystem {
                                 .with(super::drawable::StaticDrawable {
                                     tc: Into::<TermCell>::into('▒').faint(),
                                 })
-                                .with(super::health::Health::new(1, 1, 100.0, 100.0))
+                                .with(super::health::Health::new(1, 1))
                                 .with(super::health::Cover::new(-200))
                                 .build();
                             map.fill(entity, x, y);

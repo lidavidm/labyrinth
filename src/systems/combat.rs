@@ -48,6 +48,7 @@ impl specs::System<()> for CombatSystem {
                         });
                     }
                 }
+
                 health.health -= damage;
                 self.message_queue.send(format!("Hit for {} damage, {} left", damage, health.health)).unwrap();
             }

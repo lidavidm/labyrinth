@@ -509,6 +509,8 @@ impl specs::System<()> for InputSystem {
                                     self.inv_list.contents.remove(idx);
                                 }
                             }
+
+                            // Recompute health boost, damage reduction
                         },
 
                         _ => {}
