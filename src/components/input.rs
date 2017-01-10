@@ -118,16 +118,10 @@ impl InputSystem {
             Toplevel => {
                 window.print_at(Point::new(0, 0), "WASD—Move");
                 window.print_at(Point::new(0, 1), "   1—Examine");
-                window.print_at(Point::new(0, 2), "   2—Interact");
-                window.print_at(Point::new(0, 3), "   3—Fire");
+                window.print_at(Point::new(0, 2), "   2—Fire Primary");
+                window.print_at(Point::new(0, 3), "   3—Fire Secondary");
 
-                window.print_at(Point::new(14, 0), "4—Melee");
-                window.print_at(Point::new(14, 1), "5—Item");
-
-                window.print_at(Point::new(22, 0), "I—Inventory");
-                window.print_at(Point::new(22, 1), "B—Build");
-                window.print_at(Point::new(22, 2), "T—Rest");
-                window.print_at(Point::new(22, 3), "F—Journal");
+                window.print_at(Point::new(20, 0), "I—Inventory");
             }
 
             Examining => {
@@ -139,15 +133,14 @@ impl InputSystem {
             Targeting(_) => {
                 window.print_at(Point::new(0, 0), "  Esc—Cancel");
                 window.print_at(Point::new(0, 1), " WASD—Manual Aim");
-                window.print_at(Point::new(0, 2), "  Tab—Cycle Target");
+                window.print_at(Point::new(0, 2), "Mouse—Choose Target");
                 window.print_at(Point::new(0, 3), "Space—Confirm Fire");
             }
 
             Inventory => {
                 window.print_at(Point::new(0, 0), "  Esc—Cancel");
                 window.print_at(Point::new(0, 1), "   WS—Scroll");
-                window.print_at(Point::new(0, 2), "   AD—Prev/Next Page");
-                window.print_at(Point::new(0, 3), "Space—Select");
+                window.print_at(Point::new(0, 2), "Space—Select");
             }
         }
     }
@@ -171,7 +164,7 @@ impl specs::System<()> for InputSystem {
 
         match self.state {
             Toplevel => {
-                let (mut res, mut map, focused, mut movables, mut positions, mut lines, mut inventories, mut grabbables) = arg.fetch(|world| {
+                let (mut res, mut map, focused, mut movables, mut positions, mut lines, mut inventories, grabbables) = arg.fetch(|world| {
                     (
                         world.write_resource::<ui::CommandPanelResource>(),
                         world.write_resource::<super::map::Map>(),
@@ -180,7 +173,7 @@ impl specs::System<()> for InputSystem {
                         world.write::<Position>(),
                         world.write::<super::drawable::LineDrawable>(),
                         world.write::<super::player::Inventory>(),
-                        world.write::<super::player::Grabbable>(),
+                        world.read::<super::player::Grabbable>(),
                     )
                 });
                 for event in self.inputs.try_iter() {
@@ -258,7 +251,7 @@ impl specs::System<()> for InputSystem {
                             break;
                         }
 
-                        Event::Key(Key::Char(c @ '3')) | Event::Key(Key::Char(c @ '4')) => {
+                        Event::Key(Key::Char(c @ '2')) | Event::Key(Key::Char(c @ '3')) => {
                             movables.clear();
 
                             let mut start_pos = Position { x: 0, y: 0 };
@@ -273,7 +266,7 @@ impl specs::System<()> for InputSystem {
                                 end: start_pos,
                             });
                             movables.insert(e, Movable);
-                            self.state = Targeting(c == '4');
+                            self.state = Targeting(c == '3');
                             break;
                         }
 
