@@ -28,6 +28,7 @@ use ::{components, systems};
 pub enum SubGameScreen {
     Map,
     Inventory,
+    Equip,
 }
 
 pub struct GameScreen {
@@ -157,10 +158,15 @@ impl super::Screen for GameScreen {
                 self.msg_frame.refresh(compositor);
                 messages.window.refresh(compositor);
             }
-            Some(&SubGameScreen::Inventory) => {
+            Some(st @ &SubGameScreen::Inventory) | Some(st @ &SubGameScreen::Equip) => {
                 let res = world.read_resource::<systems::ui::InventoryPanelResource>();
                 self.msg_frame.border();
-                self.msg_frame.print_at(Point::new(1, 0), "INVENTORY");
+                if let &SubGameScreen::Inventory = st {
+                    self.msg_frame.print_at(Point::new(1, 0), "INVENTORY");
+                }
+                else {
+                    self.msg_frame.print_at(Point::new(1, 0), "LOADOUT");
+                }
                 self.msg_frame.refresh(compositor);
                 res.window.refresh(compositor);
             }

@@ -56,12 +56,13 @@ pub enum Event {
     MouseRelease(Point),
 }
 
-#[derive(Clone,Copy)]
+#[derive(Clone,Copy,Debug,Eq,PartialEq)]
 enum State {
     Toplevel,
     Examining,
     Targeting(bool),
     Inventory,
+    Equip,
 }
 
 impl InputSystem {
@@ -153,10 +154,17 @@ impl InputSystem {
                 window.print_at(Point::new(0, 3), "Space—Confirm Fire");
             }
 
-            Inventory => {
+            Inventory | Equip => {
                 window.print_at(Point::new(0, 0), "  Esc—Cancel");
                 window.print_at(Point::new(0, 1), "   WS—Scroll");
-                window.print_at(Point::new(0, 2), "Space—Select");
+                if self.state == Inventory {
+                    window.print_at(Point::new(0, 2), "Space—Equip");
+                    window.print_at(Point::new(0, 3), "  Tab—Equip");
+                }
+                else {
+                    window.print_at(Point::new(0, 2), "Space—Unequip");
+                    window.print_at(Point::new(0, 3), "  Tab—Inventory");
+                }
             }
         }
     }
@@ -465,7 +473,7 @@ impl specs::System<()> for InputSystem {
                 self.render(&mut res.window);
             }
 
-            Inventory => {
+            Inventory | Equip => {
                 let (
                     mut res, mut inv, focused, mut dr, mut health, mut equipped, mut inventory,
                 ) = arg.fetch(|world| {
@@ -481,8 +489,13 @@ impl specs::System<()> for InputSystem {
                 });
 
                 if !self.inv_valid {
-                    if let Some((_, _, inventory)) = (&focused, &equipped, &inventory).iter().next() {
-                        self.inv_list.contents.clone_from(&inventory.contents);
+                    if let Some((_, equip, inventory)) = (&focused, &equipped, &inventory).iter().next() {
+                        if self.state == Inventory {
+                            self.inv_list.contents.clone_from(&inventory.contents);
+                        }
+                        else {
+                            self.inv_list.contents = equip.list_equipped().iter().map(|x| (*x).clone()).collect();
+                        }
                     }
 
                     self.inv_valid = true;
@@ -495,7 +508,9 @@ impl specs::System<()> for InputSystem {
                             self.state = Toplevel;
 
                             if let Some((_, _, inventory)) = (&focused, &equipped, &mut inventory).iter().next() {
-                                inventory.contents.clone_from(&self.inv_list.contents);
+                                if self.state == Inventory {
+                                    inventory.contents.clone_from(&self.inv_list.contents);
+                                }
                             }
 
                             self.inv_valid = false;
@@ -506,42 +521,82 @@ impl specs::System<()> for InputSystem {
                         Event::Key(Key::Char('w')) => self.inv_list.move_cursor_up(),
                         Event::Key(Key::Char('s')) => self.inv_list.move_cursor_down(),
 
-                        Event::Key(Key::Char(' ')) => {
-                            let result = if let Some(item) = self.inv_list.get_selected() {
-                                if let Some((_, equip, _)) = (&focused, &mut equipped, &inventory).iter().next() {
-                                    // TODO: if there's an equipped item, place it in the inventory
-                                    let item = equip.equip(item.clone());
+                        Event::Key(Key::Char('\t')) => {
+                            self.sub_screen.send(::screen::SubScreenEvent::Pop).unwrap();
+                            if self.state == Inventory {
+                                if let Some((_, _, inventory)) = (&focused, &equipped, &mut inventory).iter().next() {
+                                    inventory.contents.clone_from(&self.inv_list.contents);
+                                }
+                                self.state = Equip;
+                                self.sub_screen.send(::screen::SubScreenEvent::Push(::screen::game::SubGameScreen::Equip)).unwrap();
+                            }
+                            else {
+                                self.state = Inventory;
+                                self.sub_screen.send(::screen::SubScreenEvent::Push(::screen::game::SubGameScreen::Inventory)).unwrap();
+                            }
+                            self.inv_valid = false;
+                            self.inv_list.cursor = 0;
+                            self.inv_list.contents.clear();
+                            break;
+                        }
 
-                                    // Recompute health boost, damage reduction
-                                    if let Some((_, dr, hp)) = (&focused, &mut dr, &mut health).iter().next() {
-                                        dr.value = 0;
-                                        hp.max_health = hp.base_health;
-                                        for item in equip.list_equipped() {
-                                            if let super::player::ItemKind::Armor { health, damage_reduction } = item.kind {
-                                                dr.value += damage_reduction;
-                                                hp.max_health += health;
+                        Event::Key(Key::Char(' ')) => {
+                            if self.state == Inventory {
+                                let result = if let Some(item) = self.inv_list.get_selected() {
+                                    if let Some((_, equip, _)) = (&focused, &mut equipped, &inventory).iter().next() {
+                                        let item = equip.equip(item.clone());
+
+                                        // Recompute health boost, damage reduction
+                                        if let Some((_, dr, hp)) = (&focused, &mut dr, &mut health).iter().next() {
+                                            dr.value = 0;
+                                            hp.max_health = hp.base_health;
+                                            for item in equip.list_equipped() {
+                                                if let super::player::ItemKind::Armor { health, damage_reduction } = item.kind {
+                                                    dr.value += damage_reduction;
+                                                    hp.max_health += health;
+                                                }
+                                            }
+
+                                            if dr.value > 0 {
+                                                self.message_queue.send(format!("DR: {}", dr.value)).unwrap();
                                             }
                                         }
 
-                                        if dr.value > 0 {
-                                            self.message_queue.send(format!("DR: {}", dr.value)).unwrap();
-                                        }
+                                        Some((item, self.inv_list.cursor))
                                     }
+                                    else {
+                                        None
+                                    }
+                                } else { None };
 
-                                    Some((item, self.inv_list.cursor))
+                                if let Some((old_item, idx)) = result {
+                                    if let Some(item) = old_item {
+                                        self.inv_list.contents[idx] = item;
+                                    }
+                                    else {
+                                        self.inv_list.move_cursor_up();
+                                        self.inv_list.contents.remove(idx);
+                                    }
                                 }
-                                else {
-                                    None
-                                }
-                            } else { None };
+                            }
+                            else {
+                                let unequipped = if let Some(item) = self.inv_list.get_selected() {
+                                    let slot = item.slot.expect("Can't unequip unequippable item!");
+                                    if let Some((_, equip, _)) = (&focused, &mut equipped, &inventory).iter().next() {
+                                        equip.unequip(slot).expect("Can't unequip slot that was equipped!");
+                                        Some((item.clone(), self.inv_list.cursor))
+                                    }
+                                    else {
+                                        None
+                                    }
+                                } else { None };
 
-                            if let Some((old_item, idx)) = result {
-                                if let Some(item) = old_item {
-                                    self.inv_list.contents[idx] = item;
-                                }
-                                else {
-                                    self.inv_list.move_cursor_up();
-                                    self.inv_list.contents.remove(idx);
+                                if let Some((old_item, idx)) = unequipped {
+                                    if let Some((_, _, inventory)) = (&focused, &mut equipped, &mut inventory).iter().next() {
+                                        inventory.contents.push(old_item.clone());
+                                        self.inv_list.move_cursor_up();
+                                        self.inv_list.contents.remove(idx);
+                                    }
                                 }
                             }
                         },

@@ -28,7 +28,7 @@ pub enum ItemKind {
     },
 }
 
-#[derive(Clone,Debug,Eq,PartialEq)]
+#[derive(Clone,Copy,Debug,Eq,PartialEq)]
 pub enum ItemSlot {
     Primary,
     Secondary,
@@ -157,6 +157,43 @@ impl Equip {
                 old
             }
             None => None,
+        }
+    }
+
+    pub fn unequip(&mut self, slot: ItemSlot) -> Option<Item> {
+        use self::ItemSlot::*;
+
+        match slot {
+            Primary => {
+                let mut old = None;
+                ::std::mem::swap(&mut old, &mut self.primary);
+                old
+            }
+            Secondary => {
+                let mut old = None;
+                ::std::mem::swap(&mut old, &mut self.secondary);
+                old
+            }
+            Head => {
+                let mut old = None;
+                ::std::mem::swap(&mut old, &mut self.head);
+                old
+            }
+            Body => {
+                let mut old = None;
+                ::std::mem::swap(&mut old, &mut self.body);
+                old
+            }
+            Legs => {
+                let mut old = None;
+                ::std::mem::swap(&mut old, &mut self.legs);
+                old
+            }
+            Feet => {
+                let mut old = None;
+                ::std::mem::swap(&mut old, &mut self.feet);
+                old
+            }
         }
     }
 
